@@ -1277,7 +1277,6 @@ async function sendAI(){
   const systemPrompt=`You are StructaViz AI, a structural engineering assistant specialising in Kenyan construction practice and the KS 02-104 standard (Kenya Standard for structural steel design, aligned with BS 5950 and Eurocode 3). You are embedded in StructaViz, a beam analysis tool. You have real-time access to the user's current design parameters and results. Be concise, practical, and educational — your audience is engineering students at Technical University of Kenya. Use SI units and reference KS 02-104 clause numbers where relevant. Costs are in Kenyan Shillings (KES). When suggesting improvements, be specific about which parameter to change and by how much.`;
 
   const fullMessage=`${context}\n\nUser question: ${msg}`;
-  const GEMINI_API_KEY='AIzaSyAPsCvPlv3U8GZBMoNnhBvuYfVPprOyZxY';
 
   // Build contents: prepend system prompt as first user/model exchange if no history yet
   const systemTurn=[
@@ -1287,7 +1286,7 @@ async function sendAI(){
   const contents=(aiHistory.length===0?systemTurn:[]).concat(aiHistory).concat([{role:'user', parts:[{text: fullMessage}]}]);
 
   try {
-    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,{
+    const res=await fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ contents })
