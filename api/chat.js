@@ -4,35 +4,41 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { contents } = req.body;
+  const { messages, system } = req.body;
 
   // API key from environment variable
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  
-  if (!GEMINI_API_KEY) {
+  const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+
+  if (!ANTHROPIC_API_KEY) {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents })
-      }
-    );
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 1024,
+        system,
+        messages
+      })
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       let errMsg = 'Something went wrong. Please try again.';
-      
+
       if (response.status === 429) {
         errMsg = 'Rate limit reached. Please wait a moment and try again.';
       } else if (response.status === 400) {
         errMsg = 'Bad request. Please try again.';
       } else if (response.status === 401 || response.status === 403) {
-        errMsg = 'API key error. Please check your Gemini API key.';
+        errMsg = 'API key error. Please check your Anthropic API key.';
       } else if (response.status >= 500) {
         errMsg = 'Server error. Please try again in a moment.';
       }

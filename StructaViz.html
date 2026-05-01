@@ -423,7 +423,7 @@ canvas{display:block;width:100%;}
       <div class="ai-header">
         <div class="ai-dot"></div>
         <span class="ai-title">STRUCTAVIZ AI</span>
-        <span class="ai-subtitle">Powered by Gemini · KS 02-104 aware</span>
+        <span class="ai-subtitle">Powered by Claude · KS 02-104 aware</span>
       </div>
       <div class="ai-messages" id="aiMessages">
         <div class="ai-msg assistant">
@@ -1274,31 +1274,21 @@ async function sendAI(){
   const thinkEl=appendAIMessage('assistant thinking','Analysing your design…');
 
   const context=getDesignContext();
-  const systemPrompt=`You are StructaViz AI, a structural engineering assistant specialising in Kenyan construction practice and the KS 02-104 standard (Kenya Standard for structural steel design, aligned with BS 5950 and Eurocode 3). You are embedded in StructaViz, a beam analysis tool. You have real-time access to the user's current design parameters and results. Be concise, practical, and educational — your audience is engineering students at Technical University of Kenya. Use SI units and reference KS 02-104 clause numbers where relevant. Costs are in Kenyan Shillings (KES). When suggesting improvements, be specific about which parameter to change and by how much.`;
+  const system=`You are StructaViz AI, a structural engineering assistant specialising in Kenyan construction practice and the KS 02-104 standard (Kenya Standard for structural steel design, aligned with BS 5950 and Eurocode 3). You are embedded in StructaViz, a beam analysis tool. You have real-time access to the user's current design parameters and results. Be concise, practical, and educational — your audience is engineering students at Technical University of Kenya. Use SI units and reference KS 02-104 clause numbers where relevant. Costs are in Kenyan Shillings (KES). When suggesting improvements, be specific about which parameter to change and by how much.`;
 
   const fullMessage=`${context}\n\nUser question: ${msg}`;
-
-  // Build contents: prepend system prompt as first user/model exchange if no history yet
-  const systemTurn=[
-    {role:'user', parts:[{text: systemPrompt}]},
-    {role:'model', parts:[{text:'Understood. I am StructaViz AI, ready to assist with KS 02-104 structural engineering questions.'}]}
-  ];
-  const contents=(aiHistory.length===0?systemTurn:[]).concat(aiHistory).concat([{role:'user', parts:[{text: fullMessage}]}]);
+  const messages=[...aiHistory, {role:'user', content: fullMessage}];
 
   try {
     const res=await fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ contents })
+      body:JSON.stringify({ system, messages })
     });
 
     if(!res.ok){
       const errData=await res.json().catch(()=>({}));
-      let errMsg='Something went wrong. Please try again.';
-      if(res.status===429) errMsg='Rate limit reached. Please wait a moment and try again.';
-      else if(res.status===400) errMsg='Bad request. Please try again.';
-      else if(res.status===401||res.status===403) errMsg='API key error. Please check your Gemini API key.';
-      else if(res.status>=500) errMsg='Server error. Please try again in a moment.';
+      let errMsg=errData.error||'Something went wrong. Please try again.';
       thinkEl.className='ai-msg error';
       thinkEl.textContent='⚠ '+errMsg;
       document.getElementById('aiSendBtn').disabled=false;
@@ -1306,11 +1296,11 @@ async function sendAI(){
     }
 
     const data=await res.json();
-    const reply=data.candidates?.[0]?.content?.parts?.[0]?.text||'Sorry, I could not get a response.';
+    const reply=data.content?.find(b=>b.type==='text')?.text||'Sorry, I could not get a response.';
     thinkEl.className='ai-msg assistant';
     thinkEl.textContent=reply;
-    aiHistory.push({role:'user', parts:[{ text: fullMessage }]});
-    aiHistory.push({role:'model', parts:[{ text: reply }]});
+    aiHistory.push({role:'user', content: fullMessage});
+    aiHistory.push({role:'assistant', content: reply});
     if(aiHistory.length>12) aiHistory=aiHistory.slice(-12);
   } catch(e){
     thinkEl.className='ai-msg error';
