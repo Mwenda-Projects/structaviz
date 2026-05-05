@@ -1298,7 +1298,7 @@ async function sendAI(){
     const data=await res.json();
     const reply=data.content?.find(b=>b.type==='text')?.text||'Sorry, I could not get a response.';
     thinkEl.className='ai-msg assistant';
-    thinkEl.textContent=reply;
+    thinkEl.innerHTML=parseMarkdown(reply);
     aiHistory.push({role:'user', content: fullMessage});
     aiHistory.push({role:'assistant', content: reply});
     if(aiHistory.length>12) aiHistory=aiHistory.slice(-12);
@@ -1310,10 +1310,73 @@ async function sendAI(){
   scrollAI();
 }
 
+function parseMarkdown(md){
+  // Escape HTML entities first to prevent XSS
+  let html = md
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+
+  // Tables: | col | col | with optional header separator
+  html = html.replace(/^(\|.+\|\n)((?:\|[-: ]+\|\n))((?:\|.+\|\n?)*)/gm, (_, header, sep, body) => {
+    const parseRow = (row, tag) =>
+      '<tr>' + row.trim().replace(/^\||\|$/g,'').split('|')
+        .map(c=>`<${tag} style="padding:4px 8px;border:1px solid var(--border2)">${c.trim()}</${tag}>`)
+        .join('') + '</tr>';
+    const hRows = header.trim().split('\n').map(r=>parseRow(r,'th')).join('');
+    const bRows = body.trim().split('\n').filter(Boolean).map(r=>parseRow(r,'td')).join('');
+    return `<table style="border-collapse:collapse;margin:8px 0;font-size:12px;width:100%"><thead>${hRows}</thead><tbody>${bRows}</tbody></table>`;
+  });
+
+  // Headings
+  html = html
+    .replace(/^### (.+)$/gm,'<h4 style="margin:10px 0 4px;color:var(--accent);font-size:13px">$1</h4>')
+    .replace(/^## (.+)$/gm,'<h3 style="margin:10px 0 4px;color:var(--accent);font-size:14px">$1</h3>')
+    .replace(/^# (.+)$/gm,'<h2 style="margin:10px 0 4px;color:var(--accent);font-size:15px">$1</h2>');
+
+  // Bold & italic
+  html = html
+    .replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>');
+
+  // Inline code
+  html = html.replace(/`([^`]+)`/g,'<code style="background:var(--s3);padding:1px 4px;border-radius:3px;font-family:var(--mono);font-size:12px">$1</code>');
+
+  // Horizontal rules
+  html = html.replace(/^---+$/gm,'<hr style="border:none;border-top:1px solid var(--border2);margin:8px 0">');
+
+  // Bullet lists (group consecutive lines)
+  html = html.replace(/(^- .+(\n|$))+/gm, match => {
+    const items = match.trim().split('\n').map(l=>`<li style="margin:2px 0">${l.replace(/^- /,'')}</li>`).join('');
+    return `<ul style="padding-left:18px;margin:4px 0">${items}</ul>`;
+  });
+
+  // Numbered lists
+  html = html.replace(/(^\d+\. .+(\n|$))+/gm, match => {
+    const items = match.trim().split('\n').map(l=>`<li style="margin:2px 0">${l.replace(/^\d+\. /,'')}</li>`).join('');
+    return `<ol style="padding-left:18px;margin:4px 0">${items}</ol>`;
+  });
+
+  // Paragraphs — wrap double-newline separated blocks
+  html = html.replace(/\n{2,}/g,'</p><p style="margin:6px 0">');
+  html = '<p style="margin:6px 0">' + html + '</p>';
+
+  // Single newlines to <br>
+  html = html.replace(/([^>])\n([^<])/g,'$1<br>$2');
+
+  return html;
+}
+
 function appendAIMessage(role,text){
   const msgs=document.getElementById('aiMessages');
   const el=document.createElement('div');
-  el.className='ai-msg '+role; el.textContent=text;
+  el.className='ai-msg '+role;
+  if(role==='assistant'){
+    el.innerHTML=parseMarkdown(text);
+  } else {
+    el.textContent=text;
+  }
   msgs.appendChild(el); scrollAI(); return el;
 }
 function scrollAI(){const msgs=document.getElementById('aiMessages');msgs.scrollTop=msgs.scrollHeight;}
