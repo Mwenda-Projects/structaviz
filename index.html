@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StructaViz — Structural Analysis for Kenya</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET & ROOT ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #080a0f;
+  --bg2:      #0d1018;
+  --bg3:      #121620;
+  --border:   rgba(255,255,255,0.06);
+  --border2:  rgba(255,255,255,0.12);
+  --accent:   #00c896;
+  --accent2:  #f97316;
+  --accent3:  #3b82f6;
+  --purple:   #6366f1;
+  --text:     #e2e8f0;
+  --text2:    #64748b;
+  --text3:    #334155;
+  --mono:     'Space Mono', monospace;
+  --display:  'Syne', sans-serif;
+  --body:     'Inter', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ─── NOISE OVERLAY ────────────────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.4;
+}
+
+/* ─── GRID BACKGROUND ──────────────────────────────────────────────────────── */
+.grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,200,150,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,150,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+}
+
+/* ─── NAV ───────────────────────────────────────────────────────────────────── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 16px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(8,10,15,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.nav-icon {
+  width: 26px;
+  height: 26px;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  flex-shrink: 0;
+}
+
+.nav-name {
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--text);
+}
+
+.nav-ver {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  list-style: none;
+}
+
+.nav-links a {
+  color: var(--text2);
+  text-decoration: none;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover { color: var(--text); }
+
+.nav-cta {
+  padding: 8px 20px;
+  background: var(--accent);
+  color: #000 !important;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px !important;
+  transition: opacity 0.2s !important;
+}
+
+.nav-cta:hover { opacity: 0.85; }
+
+/* ─── HERO ──────────────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 40px 80px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,200,150,0.08) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  pointer-events: none;
+}
+
+.hero-glow2 {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+  top: 60%;
+  left: 30%;
+  pointer-events: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border: 1px solid rgba(0,200,150,0.3);
+  border-radius: 20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fadeUp 0.6s ease 0.1s forwards;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+.hero h1 {
+  font-family: var(--display);
+  font-size: clamp(48px, 8vw, 96px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -2px;
+  margin-bottom: 12px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease 0.2s forwards;
+}
+
+.hero h1 span {
+  display: block;
+  background: linear-gradient(135deg, var(--accent), #00a878);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-family: var(--display);
+  font-size: clamp(20px, 3vw, 32px);
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease 0.3s forwards;
+}
+
+.hero p {
+  max-width: 560px;
+  color: var(--text2);
+  font-size: 16px;
+  line-height: 1.7;
+  margin: 0 auto 40px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease 0.4s forwards;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  opacity: 0;
+  animation: fadeUp 0.7s ease 0.5s forwards;
+}
+
+.btn-primary {
+  padding: 14px 32px;
+  background: var(--accent);
+  color: #000;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #00e0aa;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(0,200,150,0.25);
+}
+
+.btn-ghost {
+  padding: 14px 32px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 8px;
+  text-decoration: none;
+  border: 1px solid var(--border2);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── STATS BAR ─────────────────────────────────────────────────────────────── */
+.stats-bar {
+  width: 100%;
+  max-width: 860px;
+  margin: 60px auto 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeUp 0.7s ease 0.6s forwards;
+}
+
+.stat {
+  background: var(--bg2);
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-num {
+  font-family: var(--mono);
+  font-size: 22px;
+  color: var(--text);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.stat-num.green { color: var(--accent); }
+.stat-num.orange { color: var(--accent2); }
+.stat-num.blue { color: var(--accent3); }
+.stat-num.purple { color: var(--purple); }
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text2);
+  letter-spacing: 0.5px;
+}
+
+/* ─── SCROLL INDICATOR ──────────────────────────────────────────────────────── */
+.scroll-hint {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  opacity: 0;
+  animation: fadeIn 1s ease 1.5s forwards;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--text3), transparent);
+  animation: scrollDrop 1.5s ease infinite;
+}
+
+@keyframes scrollDrop {
+  0% { transform: scaleY(0); transform-origin: top; }
+  50% { transform: scaleY(1); transform-origin: top; }
+  51% { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* ─── SECTION SHARED ────────────────────────────────────────────────────────── */
+section {
+  position: relative;
+  padding: 100px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.section-title {
+  font-family: var(--display);
+  font-size: clamp(32px, 4vw, 52px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.05;
+  margin-bottom: 18px;
+}
+
+.section-desc {
+  color: var(--text2);
+  font-size: 16px;
+  max-width: 520px;
+  line-height: 1.7;
+}
+
+/* ─── DIVIDER ───────────────────────────────────────────────────────────────── */
+.divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ─── APP PREVIEW ───────────────────────────────────────────────────────────── */
+.preview-section {
+  padding: 80px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.preview-wrap {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border2);
+  box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,200,150,0.05);
+}
+
+.preview-bar {
+  background: #0d1018;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot.r { background: #ef4444; }
+.dot.y { background: #f59e0b; }
+.dot.g { background: #22c55e; }
+
+.preview-url {
+  flex: 1;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  letter-spacing: 0.5px;
+}
+
+.preview-inner {
+  background: var(--bg2);
+  padding: 0;
+  position: relative;
+}
+
+/* Simulated app UI */
+.sim-app {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 420px;
+  font-size: 11px;
+}
+
+.sim-sidebar {
+  background: #0d1018;
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sim-sec-title {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.sim-chips {
+  display: flex;
+  gap: 5px;
+}
+
+.sim-chip {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 9px;
+  background: var(--bg3);
+}
+
+.sim-chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,200,150,0.08);
+}
+
+.sim-slider-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.sim-slider-name { color: var(--text2); font-size: 10px; }
+.sim-slider-val { font-family: var(--mono); font-size: 10px; color: var(--text); }
+
+.sim-slider-track {
+  height: 2px;
+  background: var(--bg3);
+  border-radius: 1px;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.sim-slider-fill {
+  height: 100%;
+  border-radius: 1px;
+  background: var(--accent);
+  position: relative;
+}
+
+.sim-slider-fill::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+.sim-badge-pass {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(0,200,150,0.07);
+  border: 1px solid rgba(0,200,150,0.2);
+  font-size: 9px;
+}
+
+.sim-badge-fail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.2);
+  font-size: 9px;
+}
+
+.pass-tag { font-family: var(--mono); color: var(--accent); font-size: 8px; }
+.fail-tag { font-family: var(--mono); color: #ef4444; font-size: 8px; }
+
+.sim-main {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sim-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.sim-metric {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.sim-metric-label { font-size: 8px; color: var(--text2); margin-bottom: 3px; }
+.sim-metric-val { font-family: var(--mono); font-size: 11px; color: var(--text); }
+.sim-metric-val.ok { color: var(--accent); }
+.sim-metric-val.fail { color: #ef4444; }
+
+.sim-canvas {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.sim-canvas-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.sim-svg { width: 100%; height: 140px; }
+
+/* ─── FEATURES ──────────────────────────────────────────────────────────────── */
+.features-section {
+  padding: 100px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-top: 60px;
+}
+
+.feature {
+  background: var(--bg2);
+  padding: 36px 32px;
+  transition: background 0.2s;
+}
+
+.feature:hover { background: var(--bg3); }
+
+.feature-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  font-size: 20px;
+}
+
+.feature-icon.green { background: rgba(0,200,150,0.1); border: 1px solid rgba(0,200,150,0.2); }
+.feature-icon.blue  { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); }
+.feature-icon.orange{ background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); }
+.feature-icon.purple{ background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); }
+.feature-icon.teal  { background: rgba(20,184,166,0.1); border: 1px solid rgba(20,184,166,0.2); }
+.feature-icon.red   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.2); }
+
+.feature h3 {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+
+.feature p {
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* ─── HOW IT WORKS ──────────────────────────────────────────────────────────── */
+.how-section {
+  padding: 100px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  margin-top: 60px;
+  align-items: center;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.step {
+  display: flex;
+  gap: 20px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.step:first-child { padding-top: 0; }
+.step:last-child { border-bottom: none; }
+
+.step:hover .step-num { color: var(--accent); border-color: rgba(0,200,150,0.4); }
+
+.step-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  margin-top: 2px;
+}
+
+.step-content h4 {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+}
+
+.step-content p {
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.steps-visual {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated beam diagram */
+.beam-anim {
+  width: 100%;
+  position: relative;
+}
+
+.beam-svg { width: 100%; }
+
+/* ─── CODE COMPLIANCE ───────────────────────────────────────────────────────── */
+.compliance-section {
+  padding: 100px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.compliance-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+  margin-top: 60px;
+}
+
+.compliance-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.compliance-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  transition: border-color 0.2s;
+}
+
+.compliance-card:hover { border-color: var(--border2); }
+
+.compliance-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(0,200,150,0.1);
+  border: 1px solid rgba(0,200,150,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.compliance-card h4 {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+
+.compliance-card p {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.compliance-text .section-desc {
+  margin-bottom: 28px;
+}
+
+.code-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid rgba(0,200,150,0.3);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  margin: 3px;
+}
+
+/* ─── WHO IS IT FOR ─────────────────────────────────────────────────────────── */
+.audience-section {
+  padding: 100px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.audience-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 60px;
+}
+
+.audience-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  transition: all 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.audience-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform 0.3s;
+}
+
+.audience-card:hover::before { transform: scaleX(1); }
+.audience-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+
+.audience-emoji {
+  font-size: 32px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.audience-card h3 {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+
+.audience-card p {
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* ─── CTA SECTION ───────────────────────────────────────────────────────────── */
+.cta-wrap {
+  background: var(--bg);
+  padding: 0 40px 120px;
+}
+
+.cta-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  padding: 80px 60px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,200,150,0.07) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cta-section h2 {
+  font-family: var(--display);
+  font-size: clamp(32px, 4vw, 52px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.cta-section p {
+  color: var(--text2);
+  font-size: 16px;
+  max-width: 480px;
+  margin: 0 auto 40px;
+  line-height: 1.7;
+  position: relative;
+}
+
+.cta-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+/* ─── FOOTER ────────────────────────────────────────────────────────────────── */
+footer {
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 40px;
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-icon {
+  width: 20px;
+  height: 20px;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
+.footer-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--text2);
+}
+
+.footer-info {
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-links a {
+  font-size: 12px;
+  color: var(--text3);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover { color: var(--text2); }
+
+/* ─── ANIMATIONS ────────────────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── RESPONSIVE ────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  nav { padding: 14px 20px; }
+  .nav-links { display: none; }
+  section { padding: 70px 20px; }
+  .hero { padding: 100px 20px 60px; }
+  .stats-bar { grid-template-columns: repeat(2, 1fr); }
+  .features-grid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .steps-visual { display: none; }
+  .compliance-inner { grid-template-columns: 1fr; }
+  .audience-grid { grid-template-columns: 1fr; }
+  .cta-section { padding: 50px 24px; }
+  .sim-app { grid-template-columns: 1fr; }
+  .sim-sidebar { display: none; }
+  .sim-metrics { grid-template-columns: repeat(3, 1fr); }
+  .preview-section { padding: 60px 20px; }
+  .features-section, .how-section, .compliance-section, .audience-section { padding: 70px 20px; }
+  .cta-wrap { padding: 0 20px 80px; }
+  footer { padding: 30px 20px; }
+  .footer-inner { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .footer-info { text-align: left; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── NAV ─────────────────────────────────────────────────────────────────── -->
+<nav>
+  <a class="nav-brand" href="#">
+    <div class="nav-icon"></div>
+    <span class="nav-name">STRUCTAVIZ</span>
+    <span class="nav-ver">v3.1</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#compliance">Compliance</a></li>
+    <li><a href="#audience">Who it's for</a></li>
+    <li><a href="https://structaviz.vercel.app/app" class="nav-cta">Open App →</a></li>
+  </ul>
+</nav>
+
+<!-- ─── HERO ─────────────────────────────────────────────────────────────────── -->
+<div style="position:relative; overflow:hidden; background: var(--bg);">
+  <div class="grid-bg"></div>
+  <div class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-glow2"></div>
+
+    <div class="badge">
+      <div class="badge-dot"></div>
+      KS 02-104 COMPLIANT · KENYA EDITION
+    </div>
+
+    <h1>
+      Structural Analysis
+      <span>Built for Kenya.</span>
+    </h1>
+
+    <p class="hero-sub">Real engineering. Real code. Real results.</p>
+
+    <p>
+      StructaViz is a browser-based structural analysis tool that checks your beam designs
+      against Kenya's KS 02-104 building code — with live diagrams, cost estimates in KES,
+      and an AI assistant that speaks the language of Kenyan construction.
+    </p>
+
+    <div class="hero-actions">
+      <a href="https://structaviz.vercel.app/app" class="btn-primary">Launch StructaViz →</a>
+      <a href="#features" class="btn-ghost">See Features</a>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-num green">3</span>
+        <span class="stat-label">Beam Types</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num blue">5</span>
+        <span class="stat-label">Code Checks</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num orange">KES</span>
+        <span class="stat-label">Live Cost Estimate</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num purple">AI</span>
+        <span class="stat-label">Claude-Powered Assistant</span>
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      SCROLL
+      <div class="scroll-line"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── APP PREVIEW ───────────────────────────────────────────────────────────── -->
+<div class="preview-section reveal">
+  <div class="preview-wrap">
+    <div class="preview-bar">
+      <div class="dot r"></div>
+      <div class="dot y"></div>
+      <div class="dot g"></div>
+      <div class="preview-url">structaviz.co.ke/app</div>
+    </div>
+    <div class="preview-inner">
+      <!-- Simulated App UI -->
+      <div class="sim-app">
+        <div class="sim-sidebar">
+          <div>
+            <div class="sim-sec-title">Beam Type</div>
+            <div class="sim-chips">
+              <div class="sim-chip active">Cantilever</div>
+              <div class="sim-chip">Simply</div>
+              <div class="sim-chip">Fixed</div>
+            </div>
+          </div>
+          <div>
+            <div class="sim-sec-title">Parameters</div>
+            <div class="sim-slider-row">
+              <span class="sim-slider-name">Load (kN)</span>
+              <span class="sim-slider-val">50</span>
+            </div>
+            <div class="sim-slider-track"><div class="sim-slider-fill" style="width:50%"></div></div>
+            <div class="sim-slider-row">
+              <span class="sim-slider-name">Span (m)</span>
+              <span class="sim-slider-val">8</span>
+            </div>
+            <div class="sim-slider-track"><div class="sim-slider-fill" style="width:40%"></div></div>
+            <div class="sim-slider-row">
+              <span class="sim-slider-name">Height (mm)</span>
+              <span class="sim-slider-val">300</span>
+            </div>
+            <div class="sim-slider-track"><div class="sim-slider-fill" style="width:60%"></div></div>
+          </div>
+          <div>
+            <div class="sim-sec-title">KS 02-104 Checks</div>
+            <div class="sim-badge-pass" style="margin-bottom:5px;">
+              <span style="color:var(--text2);">Shear capacity</span>
+              <span class="pass-tag">PASS</span>
+            </div>
+            <div class="sim-badge-fail" style="margin-bottom:5px;">
+              <span style="color:var(--text2);">Deflection</span>
+              <span class="fail-tag">FAIL</span>
+            </div>
+            <div class="sim-badge-fail">
+              <span style="color:var(--text2);">Bending stress</span>
+              <span class="fail-tag">FAIL</span>
+            </div>
+          </div>
+        </div>
+        <div class="sim-main">
+          <div class="sim-metrics">
+            <div class="sim-metric">
+              <div class="sim-metric-label">Max deflection</div>
+              <div class="sim-metric-val fail">2818mm</div>
+            </div>
+            <div class="sim-metric">
+              <div class="sim-metric-label">Allow. deflect.</div>
+              <div class="sim-metric-val">44.4mm</div>
+            </div>
+            <div class="sim-metric">
+              <div class="sim-metric-label">Max moment</div>
+              <div class="sim-metric-val">200 kN·m</div>
+            </div>
+            <div class="sim-metric">
+              <div class="sim-metric-label">Max stress</div>
+              <div class="sim-metric-val fail">2685 MPa</div>
+            </div>
+            <div class="sim-metric">
+              <div class="sim-metric-label">Max shear</div>
+              <div class="sim-metric-val ok">50 kN</div>
+            </div>
+            <div class="sim-metric">
+              <div class="sim-metric-label">Safety factor</div>
+              <div class="sim-metric-val fail">0.09</div>
+            </div>
+          </div>
+          <div class="sim-canvas">
+            <div class="sim-canvas-label">Deflection · Bending Moment · Shear Force</div>
+            <svg class="sim-svg" viewBox="0 0 600 140" xmlns="http://www.w3.org/2000/svg">
+              <!-- Grid lines -->
+              <line x1="0" y1="30" x2="600" y2="30" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="70" x2="600" y2="70" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="110" x2="600" y2="110" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="100" y1="0" x2="100" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="200" y1="0" x2="200" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="300" y1="0" x2="300" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="400" y1="0" x2="400" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="500" y1="0" x2="500" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <!-- Deflected shape (green) -->
+              <path d="M 20 20 Q 200 22 350 55 Q 450 80 580 115"
+                    fill="none" stroke="#00c896" stroke-width="2" opacity="0.9"/>
+              <!-- Bending moment (blue) -->
+              <path d="M 20 70 L 350 68 Q 400 67 450 80 L 580 115"
+                    fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.7"/>
+              <!-- Shear force (orange) — stepped -->
+              <path d="M 20 40 L 350 40 L 350 90 L 580 90"
+                    fill="none" stroke="#f97316" stroke-width="2" opacity="0.7"/>
+              <!-- Load arrow -->
+              <line x1="350" y1="5" x2="350" y2="38" stroke="#f97316" stroke-width="1.5" marker-end="url(#arr)"/>
+              <text x="354" y="18" fill="#f97316" font-size="9" font-family="monospace">50kN</text>
+              <!-- Axis labels -->
+              <text x="20" y="135" fill="rgba(255,255,255,0.2)" font-size="8" font-family="monospace">0.0m</text>
+              <text x="95" y="135" fill="rgba(255,255,255,0.2)" font-size="8" font-family="monospace">1.0m</text>
+              <text x="195" y="135" fill="rgba(255,255,255,0.2)" font-size="8" font-family="monospace">2.0m</text>
+              <text x="295" y="135" fill="rgba(255,255,255,0.2)" font-size="8" font-family="monospace">4.0m</text>
+              <text x="480" y="135" fill="rgba(255,255,255,0.2)" font-size="8" font-family="monospace">8.0m</text>
+              <defs>
+                <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L6,3 z" fill="#f97316"/>
+                </marker>
+              </defs>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── FEATURES ─────────────────────────────────────────────────────────────── -->
+<div class="features-section" id="features">
+  <span class="section-label reveal">What it does</span>
+  <h2 class="section-title reveal">Everything a structural<br>engineer needs in one tab.</h2>
+  <p class="section-desc reveal">No installation. No subscription. No server. Just open it in your browser and start analysing.</p>
+
+  <div class="features-grid reveal">
+
+    <div class="feature">
+      <div class="feature-icon green">📐</div>
+      <h3>Real Beam Analysis</h3>
+      <p>Cantilever, simply supported, and fixed-fixed beams with full deflection, bending moment, and shear force diagrams rendered live as you adjust parameters.</p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-icon blue">🏗️</div>
+      <h3>Standard Section Library</h3>
+      <p>Choose from Universal Beams, Universal Columns, Rectangular Hollow Sections, and Circular Hollow Sections — or input custom parametric dimensions.</p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-icon orange">⚖️</div>
+      <h3>KS 02-104 Compliance</h3>
+      <p>Automatic code checks against Kenya's structural steel standard: deflection limits, bending stress, shear capacity, safety factor, and section adequacy — all at once.</p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-icon purple">✦ AI</div>
+      <h3>AI Engineering Assistant</h3>
+      <p>Powered by Claude. Ask it why your beam is failing, get section recommendations, or request a plain-English explanation of any compliance result.</p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-icon teal">💰</div>
+      <h3>Live KES Cost Estimator</h3>
+      <p>Material cost calculated in Kenyan Shillings based on your section geometry and current steel pricing. Adjust the price per kg in real time.</p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-icon red">📄</div>
+      <h3>PDF Report Export</h3>
+      <p>Generate a professional structural analysis report with diagrams, compliance stamps, cost breakdown, and input parameters — ready to share with a client or supervising engineer.</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── HOW IT WORKS ──────────────────────────────────────────────────────────── -->
+<div class="how-section" id="how">
+  <span class="section-label reveal">Workflow</span>
+  <h2 class="section-title reveal">From inputs to report<br>in under a minute.</h2>
+
+  <div class="steps">
+    <div class="steps-list reveal">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <h4>Choose your beam configuration</h4>
+          <p>Select cantilever, simply supported, or fixed-fixed. Pick a load type — point load, UDL, or triangular — and set its position along the span.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <h4>Define your cross section</h4>
+          <p>Use a parametric section or pick from the standard library (UB, UC, RHS, CHS). Set material properties and include self-weight if needed.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <h4>Read the live results</h4>
+          <p>Deflection, bending moment, shear force, stress, and safety factor update instantly. The KS 02-104 compliance panel tells you exactly what passes and what fails.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <h4>Export your report</h4>
+          <p>One click generates a printable PDF with your diagrams, all results, compliance stamps, and a KES material cost breakdown.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="steps-visual reveal">
+      <!-- Animated flow diagram -->
+      <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:300px;">
+        <defs>
+          <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#00c896;stop-opacity:0.8"/>
+            <stop offset="100%" style="stop-color:#00c896;stop-opacity:0.2"/>
+          </linearGradient>
+          <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.8"/>
+            <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0.2"/>
+          </linearGradient>
+          <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#f97316;stop-opacity:0.8"/>
+            <stop offset="100%" style="stop-color:#f97316;stop-opacity:0.2"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Background circles -->
+        <circle cx="150" cy="150" r="130" fill="none" stroke="rgba(0,200,150,0.05)" stroke-width="1"/>
+        <circle cx="150" cy="150" r="90" fill="none" stroke="rgba(0,200,150,0.05)" stroke-width="1"/>
+        <circle cx="150" cy="150" r="50" fill="none" stroke="rgba(0,200,150,0.08)" stroke-width="1"/>
+
+        <!-- Center node -->
+        <circle cx="150" cy="150" r="28" fill="rgba(0,200,150,0.1)" stroke="rgba(0,200,150,0.4)" stroke-width="1.5"/>
+        <text x="150" y="147" text-anchor="middle" fill="#00c896" font-size="8" font-family="monospace" font-weight="bold">FEA</text>
+        <text x="150" y="158" text-anchor="middle" fill="#00c896" font-size="8" font-family="monospace">ENGINE</text>
+
+        <!-- Orbit nodes -->
+        <!-- Inputs -->
+        <circle cx="150" cy="30" r="22" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.4)" stroke-width="1.5"/>
+        <text x="150" y="27" text-anchor="middle" fill="#3b82f6" font-size="7" font-family="monospace">BEAM</text>
+        <text x="150" y="37" text-anchor="middle" fill="#3b82f6" font-size="7" font-family="monospace">CONFIG</text>
+
+        <!-- Section -->
+        <circle cx="270" cy="150" r="22" fill="rgba(99,102,241,0.1)" stroke="rgba(99,102,241,0.4)" stroke-width="1.5"/>
+        <text x="270" y="147" text-anchor="middle" fill="#6366f1" font-size="7" font-family="monospace">CROSS</text>
+        <text x="270" y="157" text-anchor="middle" fill="#6366f1" font-size="7" font-family="monospace">SECTION</text>
+
+        <!-- Compliance -->
+        <circle cx="150" cy="270" r="22" fill="rgba(0,200,150,0.1)" stroke="rgba(0,200,150,0.4)" stroke-width="1.5"/>
+        <text x="150" y="267" text-anchor="middle" fill="#00c896" font-size="7" font-family="monospace">KS 02</text>
+        <text x="150" y="277" text-anchor="middle" fill="#00c896" font-size="7" font-family="monospace">-104</text>
+
+        <!-- Cost -->
+        <circle cx="30" cy="150" r="22" fill="rgba(249,115,22,0.1)" stroke="rgba(249,115,22,0.4)" stroke-width="1.5"/>
+        <text x="30" y="147" text-anchor="middle" fill="#f97316" font-size="7" font-family="monospace">COST</text>
+        <text x="30" y="157" text-anchor="middle" fill="#f97316" font-size="7" font-family="monospace">KES</text>
+
+        <!-- Connecting lines -->
+        <line x1="150" y1="52" x2="150" y2="122" stroke="rgba(59,130,246,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+        <line x1="248" y1="150" x2="178" y2="150" stroke="rgba(99,102,241,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+        <line x1="150" y1="248" x2="150" y2="178" stroke="rgba(0,200,150,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+        <line x1="52" y1="150" x2="122" y2="150" stroke="rgba(249,115,22,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+
+        <!-- Corner labels -->
+        <text x="215" y="55" fill="rgba(255,255,255,0.15)" font-size="8" font-family="monospace">2D/3D</text>
+        <text x="215" y="255" fill="rgba(255,255,255,0.15)" font-size="8" font-family="monospace">REPORT</text>
+        <text x="40" y="55" fill="rgba(255,255,255,0.15)" font-size="8" font-family="monospace">LOADS</text>
+        <text x="40" y="255" fill="rgba(255,255,255,0.15)" font-size="8" font-family="monospace">AI ✦</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── COMPLIANCE ────────────────────────────────────────────────────────────── -->
+<div class="compliance-section" id="compliance">
+  <div class="compliance-inner">
+    <div class="compliance-text reveal">
+      <span class="section-label">Code compliance</span>
+      <h2 class="section-title">Built around<br>Kenyan standards.</h2>
+      <p class="section-desc">
+        Most structural software is calibrated for US or European codes. StructaViz is built ground-up
+        for the Kenyan context — referencing KS 02-104, BS 5950, and Eurocode 3 where relevant to local practice.
+      </p>
+      <div style="margin-top: 20px;">
+        <span class="code-tag">KS 02-104</span>
+        <span class="code-tag">BS 5950</span>
+        <span class="code-tag">Eurocode 3</span>
+        <span class="code-tag">L/180 · L/360</span>
+      </div>
+    </div>
+
+    <div class="compliance-cards reveal">
+      <div class="compliance-card">
+        <div class="compliance-card-icon">📏</div>
+        <div>
+          <h4>Deflection Check</h4>
+          <p>Cantilever limit L/180, simply supported L/360. Actual vs allowable shown side by side.</p>
+        </div>
+      </div>
+      <div class="compliance-card">
+        <div class="compliance-card-icon">💪</div>
+        <div>
+          <h4>Bending Stress</h4>
+          <p>Calculated stress vs yield strength fy. Utilisation ratio flagged at 90% capacity.</p>
+        </div>
+      </div>
+      <div class="compliance-card">
+        <div class="compliance-card-icon">✂️</div>
+        <div>
+          <h4>Shear Capacity</h4>
+          <p>Maximum shear force vs plastic shear resistance Vpl of the chosen section.</p>
+        </div>
+      </div>
+      <div class="compliance-card">
+        <div class="compliance-card-icon">🛡️</div>
+        <div>
+          <h4>Safety Factor</h4>
+          <p>Global safety factor computed and checked against the KS minimum of 1.67.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── AUDIENCE ──────────────────────────────────────────────────────────────── -->
+<div class="audience-section" id="audience">
+  <span class="section-label reveal">Who it's built for</span>
+  <h2 class="section-title reveal">From the lecture hall<br>to the construction site.</h2>
+
+  <div class="audience-grid">
+    <div class="audience-card reveal">
+      <span class="audience-emoji">🎓</span>
+      <h3>Engineering Students</h3>
+      <p>Visualise beam theory in real time. See how changing span, load, or section instantly shifts the moment diagram and compliance status. StructaViz makes structural mechanics tangible.</p>
+    </div>
+    <div class="audience-card reveal">
+      <span class="audience-emoji">🏢</span>
+      <h3>Structural Engineers</h3>
+      <p>Fast preliminary checks in the browser before committing to full FEM software. Quickly compare sections, get a KES cost ballpark, and generate a report for a client meeting.</p>
+    </div>
+    <div class="audience-card reveal">
+      <span class="audience-emoji">📚</span>
+      <h3>Lecturers & Tutors</h3>
+      <p>Use StructaViz as a live teaching tool. Walk students through load effects, explain KS 02-104 compliance, and demonstrate the cost implications of section choice — all in class.</p>
+    </div>
+    <div class="audience-card reveal">
+      <span class="audience-emoji">🔨</span>
+      <h3>Contractors & Quantity Surveyors</h3>
+      <p>Get a material cost estimate in Kenyan Shillings with your own price-per-kg input. Understand whether a proposed section is code-compliant before ordering steel.</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── CTA ───────────────────────────────────────────────────────────────────── -->
+<div class="cta-wrap">
+  <div style="height:100px;"></div>
+  <div class="cta-section reveal">
+    <div class="cta-glow"></div>
+    <div class="badge" style="animation:none;opacity:1;margin-bottom:24px;">
+      <div class="badge-dot"></div>
+      FREE · NO SIGNUP · RUNS IN YOUR BROWSER
+    </div>
+    <h2>Ready to analyse your beam?</h2>
+    <p>Open StructaViz in your browser right now. No account, no install, no cost.</p>
+    <div class="cta-actions">
+      <a href="https://structaviz.vercel.app/app" class="btn-primary">Launch StructaViz →</a>
+      <a href="mailto:mwendantony28@gmail.com" class="btn-ghost">Get in touch</a>
+    </div>
+  </div>
+</div>
+
+<!-- ─── FOOTER ────────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="footer-icon"></div>
+      <span class="footer-name">STRUCTAVIZ v3.1</span>
+    </div>
+    <div class="footer-info">
+      Built at Technical University of Kenya · Centre for Innovation and Technology Transfer (CITT)<br>
+      References: KS 02-104 · BS 5950 · Eurocode 3 · For educational and preliminary design use only.
+    </div>
+    <div class="footer-links">
+      <a href="https://structaviz.vercel.app/app">App</a>
+      <a href="#features">Features</a>
+      <a href="mailto:mwendantony28@gmail.com">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ─── SCROLL REVEAL ─────────────────────────────────────────────────────────── -->
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
