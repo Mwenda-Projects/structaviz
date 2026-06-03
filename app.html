@@ -130,18 +130,62 @@ select{width:100%;padding:7px 10px;background:var(--s3);border:1px solid var(--b
 /* MAIN */
 .main{padding:18px;display:flex;flex-direction:column;gap:14px;overflow:hidden;}
 
-/* Responsive */
+/* ─── BOTTOM SHEET (mobile only) ──────────────────────────────────────────── */
+.sheet-handle{display:none;}
+
 @media (max-width:768px){
-  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
-  .sidebar{border-right:none;border-bottom:1px solid var(--border);max-height:340px;overflow-y:auto;}
-  .topbar{padding:12px 16px;}
-  .topbar-right{flex-wrap:wrap;gap:6px;}
-  .tabs{flex-wrap:wrap;}
-  .metrics{grid-template-columns:repeat(3,1fr);}
-  .panel{padding:12px;}
-  .legend{flex-direction:column;gap:4px;}
-  .ai-panel{height:400px;}
-  .cost-grid{grid-template-columns:1fr;}
+  .layout{display:block;position:relative;min-height:calc(100vh - 53px);}
+  .main{padding:12px;padding-bottom:80px;}
+  .metrics{grid-template-columns:repeat(3,1fr);gap:6px;}
+  .metric{padding:8px 10px;}
+  .metric-label{font-size:9px;}
+  .metric-val{font-size:12px;}
+  .tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{white-space:nowrap;flex-shrink:0;padding:6px 12px;font-size:11px;}
+  .panel{padding:10px;}
+  .panel-label{font-size:8px;margin-bottom:8px;}
+  .legend{flex-direction:row;flex-wrap:wrap;gap:8px;}
+  .leg{font-size:10px;}
+  .ai-panel{height:calc(100vh - 200px);}
+  .topbar{padding:10px 14px;}
+  .topbar-right .pill{display:none;}
+  .topbar-right .pill.kenya{display:inline-flex;}
+  .cost-grid{grid-template-columns:1fr 1fr;}
+
+  /* BOTTOM SHEET */
+  .sidebar{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    z-index:200;
+    border-right:none;
+    border-top:1px solid var(--border2);
+    border-radius:16px 16px 0 0;
+    padding:0 16px 24px;
+    max-height:80vh;
+    overflow-y:auto;
+    transform:translateY(calc(100% - 52px));
+    transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+    background:var(--s1);
+    box-shadow:0 -8px 40px rgba(0,0,0,0.4);
+  }
+  .sidebar.open{transform:translateY(0);}
+
+  .sheet-handle{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:10px 0 8px;
+    cursor:pointer;
+    position:sticky;
+    top:0;
+    background:var(--s1);
+    z-index:2;
+    gap:4px;
+  }
+  .sheet-handle-bar{width:36px;height:4px;border-radius:2px;background:var(--border2);}
+  .sheet-handle-label{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;}
 }
 
 /* Tabs */
@@ -231,7 +275,12 @@ canvas{display:block;width:100%;}
 </div>
 
 <div class="layout">
-<div class="sidebar">
+<div class="sidebar" id="sidebar">
+  <!-- Mobile bottom sheet handle -->
+  <div class="sheet-handle" id="sheetHandle" onclick="toggleSheet()">
+    <div class="sheet-handle-bar"></div>
+    <div class="sheet-handle-label" id="sheetLabel">Controls ↑</div>
+  </div>
 
   <!-- Beam Type -->
   <div class="sec">
@@ -406,7 +455,7 @@ canvas{display:block;width:100%;}
 
   <div id="view3d" style="display:none;">
     <div class="panel">
-      <div class="panel-label">3D Stress Visualization — drag to rotate</div>
+      <div class="panel-label">3D Stress Visualization — drag or swipe to rotate</div>
       <canvas id="c3d" height="400"></canvas>
     </div>
   </div>
@@ -1208,22 +1257,57 @@ function drawSection(p) {
   ctx.fillText('Neutral axis',cx+db/2+8,cy+3);
 }
 
-// ─── 3D DRAG ──────────────────────────────────────────────────────────────────
+// ─── 3D DRAG (mouse + touch) ──────────────────────────────────────────────────
 const c3=document.getElementById('c3d');
-c3.addEventListener('mousedown',e=>{drag=true;lmx=e.clientX;lmy=e.clientY;});
-c3.addEventListener('mousemove',e=>{
-  if(!drag)return;
-  rotY+=(e.clientX-lmx)*0.01; rotX+=(e.clientY-lmy)*0.01;
-  lmx=e.clientX; lmy=e.clientY;
-  // Use lastParams and pass the stored maxDef — recompute to keep stress colours correct
+
+function do3dMove(cx,cy){
+  rotY+=(cx-lmx)*0.01; rotX+=(cy-lmy)*0.01;
+  lmx=cx; lmy=cy;
   if(lastParams){
     const N=50,xs=Array.from({length:N+1},(_,i)=>lastParams.L*i/N);
     const defs=xs.map(x=>defAt(x,lastParams));
     draw3d(lastParams,Math.max(...defs));
   }
-});
+}
+
+// Mouse
+c3.addEventListener('mousedown',e=>{drag=true;lmx=e.clientX;lmy=e.clientY;});
+c3.addEventListener('mousemove',e=>{if(!drag)return;do3dMove(e.clientX,e.clientY);});
 c3.addEventListener('mouseup',()=>drag=false);
 c3.addEventListener('mouseleave',()=>drag=false);
+
+// Touch
+c3.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  drag=true;
+  lmx=e.touches[0].clientX;
+  lmy=e.touches[0].clientY;
+},{passive:false});
+c3.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(!drag)return;
+  do3dMove(e.touches[0].clientX,e.touches[0].clientY);
+},{passive:false});
+c3.addEventListener('touchend',()=>drag=false);
+
+// ─── BOTTOM SHEET TOGGLE ──────────────────────────────────────────────────────
+function toggleSheet(){
+  const sidebar=document.getElementById('sidebar');
+  const label=document.getElementById('sheetLabel');
+  const isOpen=sidebar.classList.toggle('open');
+  label.textContent=isOpen?'Controls ↓':'Controls ↑';
+}
+
+// Close sheet when a tab is clicked on mobile
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    const sidebar=document.getElementById('sidebar');
+    if(sidebar.classList.contains('open')){
+      sidebar.classList.remove('open');
+      document.getElementById('sheetLabel').textContent='Controls ↑';
+    }
+  });
+});
 
 // ─── AI ASSISTANT ─────────────────────────────────────────────────────────────
 let aiHistory=[];
