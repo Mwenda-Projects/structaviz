@@ -6,6 +6,10 @@ let rotX = 0.4, rotY = 0.5, drag = false, lmx, lmy;
 let sectionMode = 'custom';
 let stdSectionOverride = null;
 let lastParams = null;
+// Multi-span state
+let spanCount = 1;
+let spanLengths = [8, 8, 8];
+let spanLoads   = [50, 50, 50];
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 function setTheme(t) {
@@ -36,6 +40,53 @@ function getLoadPos() {
 // Show/hide load position slider based on load type
 function updateLoadPosVisibility() {
   document.getElementById('loadPosWrap').style.display = load === 'point' ? '' : 'none';
+}
+
+// ─── SPAN COUNT SELECTOR ──────────────────────────────────────────────────────
+function setSpanCount(n) {
+  spanCount = n;
+  document.querySelectorAll('.span-count-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('spanBtn'+n).classList.add('on');
+
+  // Show/hide single-span beam type buttons
+  const singleSpanBeamSec = document.getElementById('singleSpanBeamSec');
+  singleSpanBeamSec.style.display = n === 1 ? '' : 'none';
+
+  // Show/hide multi-span controls
+  document.getElementById('multiSpanControls').style.display = n > 1 ? '' : 'none';
+
+  // Show/hide single-span load type and position (only for single span)
+  document.getElementById('singleSpanLoadSec').style.display = n === 1 ? '' : 'none';
+
+  if (n > 1) buildSpanControls();
+  go();
+}
+
+function buildSpanControls() {
+  const wrap = document.getElementById('spanControlsWrap');
+  wrap.innerHTML = '';
+  for (let i = 0; i < spanCount; i++) {
+    wrap.innerHTML += `
+      <div style="margin-bottom:14px;">
+        <div class="sec-label">Span ${i+1}</div>
+        <div class="ctrl">
+          <div class="ctrl-row">
+            <span class="ctrl-name">Length (m)</span>
+            <span class="ctrl-val" id="vSpanL${i}">${spanLengths[i]}</span>
+          </div>
+          <input type="range" min="1" max="20" value="${spanLengths[i]}"
+            oninput="spanLengths[${i}]=parseFloat(this.value);document.getElementById('vSpanL${i}').textContent=this.value;go()">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-row">
+            <span class="ctrl-name">UDL (kN/m)</span>
+            <span class="ctrl-val" id="vSpanW${i}">${spanLoads[i]}</span>
+          </div>
+          <input type="range" min="1" max="300" value="${spanLoads[i]}"
+            oninput="spanLoads[${i}]=parseFloat(this.value);document.getElementById('vSpanW${i}').textContent=this.value;go()">
+        </div>
+      </div>`;
+  }
 }
 
 // ─── SECTION DEFINITIONS ─────────────────────────────────────────────────────
@@ -489,8 +540,256 @@ function updateCost() {
   document.getElementById('cTotal').textContent = 'KES ' + total.toLocaleString('en-KE',{maximumFractionDigits:0});
 }
 
+// ─── MULTI-SPAN: THREE-MOMENT EQUATION SOLVER ────────────────────────────────
+// Solves a continuous beam over 2 or 3 equal-section spans with UDL per span.
+// Boundary conditions: M0 = 0 (pin left), Mn = 0 (pin right).
+// Returns array of support moments [M0, M1, ..., Mn] in N·m.
+function solveThreeMoment(spans, loads, EI) {
+  const n = spans.length; // number of spans
+  // For a propped-continuous beam, interior support moments are unknowns.
+  // Three-moment equation for interior support i (between spans i-1 and i):
+  //   L[i-1]*M[i-1] + 2*(L[i-1]+L[i])*M[i] + L[i]*M[i+1] = -6*EI*(θ[i-1]+θ[i])
+  // For UDL w on span L: free-span fixed-end term = w*L^3/4
+  // Simplified (constant EI): L[i-1]*M[i-1] + 2*(L[i-1]+L[i])*M[i] + L[i]*M[i+1]
+  //   = -(w[i-1]*L[i-1]^3 + w[i]*L[i]^3) / 4
+  // Boundary: M[0] = 0, M[n] = 0
+
+  if (n === 1) return [0, 0]; // single span — handled by existing solver
+
+  if (n === 2) {
+    // One unknown: M1 (interior support)
+    const L0 = spans[0], L1 = spans[1];
+    const w0 = loads[0], w1 = loads[1];
+    const rhs = -(w0*L0*L0*L0 + w1*L1*L1*L1) / 4;
+    const M1 = rhs / (2*(L0+L1));
+    return [0, M1, 0];
+  }
+
+  if (n === 3) {
+    // Two unknowns: M1, M2
+    // Equation for support 1: L0*M0 + 2*(L0+L1)*M1 + L1*M2 = -(w0*L0^3+w1*L1^3)/4
+    // Equation for support 2: L1*M1 + 2*(L1+L2)*M2 + L2*M3 = -(w1*L1^3+w2*L2^3)/4
+    // With M0=0, M3=0:
+    const L0=spans[0], L1=spans[1], L2=spans[2];
+    const w0=loads[0], w1=loads[1], w2=loads[2];
+    const a11 = 2*(L0+L1), a12 = L1;
+    const a21 = L1,         a22 = 2*(L1+L2);
+    const b1  = -(w0*L0*L0*L0 + w1*L1*L1*L1) / 4;
+    const b2  = -(w1*L1*L1*L1 + w2*L2*L2*L2) / 4;
+    const det = a11*a22 - a12*a21;
+    const M1  = (b1*a22 - b2*a12) / det;
+    const M2  = (a11*b2 - a21*b1) / det;
+    return [0, M1, M2, 0];
+  }
+}
+
+// Compute BMD, SFD, deflection arrays for a multi-span beam
+// Returns { xs, moms, shrs, defs, totalL, supportXs }
+function solveMultiSpan(p) {
+  const spans  = spanLengths.slice(0, spanCount);
+  const loads  = spanLoads.slice(0, spanCount).map(v => v * 1000); // kN/m → N/m
+  const EI     = p.E * p.sec.I;
+  const Ms     = solveThreeMoment(spans, loads, EI); // support moments
+  const totalL = spans.reduce((a,b)=>a+b, 0);
+  const N_PER  = 100; // points per span
+
+  const xs=[], moms=[], shrs=[], defs=[];
+  let xOffset = 0;
+  const supportXs = [0];
+
+  spans.forEach((L, si) => {
+    const w  = loads[si];
+    const ML = Ms[si];     // moment at left support of this span
+    const MR = Ms[si+1];   // moment at right support of this span
+    // Reactions from equilibrium:
+    // RL = w*L/2 + (ML - MR)/L
+    // RR = w*L/2 - (ML - MR)/L   (but RR not needed explicitly)
+    const RL = w*L/2 + (ML - MR)/L;
+
+    for (let i = 0; i <= N_PER; i++) {
+      const x  = L * i / N_PER;
+      const xG = xOffset + x;
+      xs.push(xG);
+
+      // Bending moment: M(x) = ML + RL*x - w*x^2/2
+      const m = ML + RL*x - w*x*x/2;
+      moms.push(m);
+
+      // Shear: V(x) = RL - w*x
+      const v = RL - w*x;
+      shrs.push(v);
+
+      // Deflection using double integration with BCs y(0)=0, y(L)=0
+      // y(x) = (1/EI)[ ML*x^2/2 + RL*x^3/6 - w*x^4/24 + C1*x ]
+      // where C1 = (MR*L/2 - ML*L/2 - RL*L^2/6 + w*L^3/24) * (1/L) * EI ... simplified:
+      // Apply y(L)=0: C1 = -(ML*L/2 + RL*L^2/6 - w*L^3/24) / L * ... let's derive cleanly
+      // y(L)=0 → ML*L^2/2 + RL*L^3/6 - w*L^4/24 + C1*L = 0
+      // C1 = -(ML*L/2 + RL*L^2/6 - w*L^3/24)
+      const C1 = -(ML*L/2 + RL*L*L/6 - w*L*L*L/24);
+      const d = (ML*x*x/2 + RL*x*x*x/6 - w*x*x*x*x/24 + C1*x) / EI;
+      defs.push(d);
+    }
+    xOffset += L;
+    supportXs.push(xOffset);
+  });
+
+  return { xs, moms, shrs, defs, totalL, supportXs, Ms };
+}
+
+// Draw the multi-span 2D diagram
+function draw2dMultiSpan(result, p) {
+  const { xs, moms, shrs, defs, totalL, supportXs } = result;
+  const c   = document.getElementById('c2d');
+  const dpr = window.devicePixelRatio||1;
+  const W   = c.offsetWidth||700, H=340;
+  c.width=W*dpr; c.height=H*dpr;
+  const ctx = c.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const PL=56, PR=20, PT=40, PB=30;
+  const bW = W-PL-PR;
+  const beamY=H*0.30, momBase=H*0.62, shrBase=H*0.87;
+  const N = xs.length-1;
+
+  const maxDef = Math.max(...defs.map(Math.abs))||1e-9;
+  const maxMom = Math.max(...moms.map(Math.abs))||1e-9;
+  const maxShr = Math.max(...shrs.map(Math.abs))||1e-9;
+  const ds = Math.min(50/maxDef, 8000);
+  const ms = 48/maxMom;
+  const ss = 18/maxShr;
+
+  function xToCanvas(x) { return PL + (x/totalL)*bW; }
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.5;
+  for(let i=0;i<=10;i++){const cx=PL+bW*i/10;ctx.beginPath();ctx.moveTo(cx,PT);ctx.lineTo(cx,H-PB);ctx.stroke();}
+
+  // L/360 limit line
+  const allowDef = Math.min(...spanLengths.slice(0,spanCount)) / 360;
+  const defLim = allowDef * ds;
+  ctx.fillStyle='rgba(0,200,150,0.04)'; ctx.fillRect(PL,beamY,bW,defLim);
+  ctx.setLineDash([4,3]); ctx.strokeStyle='rgba(0,200,150,0.3)'; ctx.lineWidth=0.7;
+  ctx.beginPath(); ctx.moveTo(PL,beamY+defLim); ctx.lineTo(PL+bW,beamY+defLim); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font='9px Space Mono,monospace'; ctx.fillStyle='rgba(0,200,150,0.6)';
+  ctx.fillText('L/360 limit', PL+4, beamY+defLim-3);
+
+  // Supports — pin at each support
+  function pin(x,y){
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-8,y+14);ctx.lineTo(x+8,y+14);ctx.closePath();
+    ctx.strokeStyle='rgba(0,200,150,0.7)';ctx.lineWidth=1.2;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x-11,y+14);ctx.lineTo(x+11,y+14);ctx.stroke();
+  }
+  supportXs.forEach(sx => pin(xToCanvas(sx), beamY));
+
+  // UDL arrows per span
+  ctx.strokeStyle='#f97316'; ctx.fillStyle='#f97316'; ctx.lineWidth=1.2;
+  spanLengths.slice(0,spanCount).forEach((L,si) => {
+    const x0 = supportXs[si], x1 = supportXs[si+1];
+    const steps = 6;
+    for(let k=0;k<=steps;k++){
+      const ax = xToCanvas(x0 + (x1-x0)*k/steps);
+      ctx.beginPath();ctx.moveTo(ax,beamY-20);ctx.lineTo(ax,beamY-4);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ax-3,beamY-9);ctx.lineTo(ax,beamY);ctx.lineTo(ax+3,beamY-9);ctx.fill();
+    }
+    ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
+    ctx.fillText(spanLoads[si]+'kN/m', xToCanvas((x0+x1)/2), beamY-24);
+  });
+  ctx.textAlign='left';
+
+  // Undeformed beam
+  ctx.setLineDash([5,4]); ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(PL,beamY); ctx.lineTo(PL+bW,beamY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Deflected shape
+  ctx.strokeStyle='#00c896'; ctx.lineWidth=2.5;
+  ctx.beginPath();
+  xs.forEach((x,i)=>{
+    const cx=xToCanvas(x), cy=beamY+defs[i]*ds;
+    i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy);
+  });
+  ctx.stroke();
+  const maxDefIdx = defs.map(Math.abs).indexOf(Math.max(...defs.map(Math.abs)));
+  ctx.font='10px Space Mono,monospace'; ctx.fillStyle='#00c896'; ctx.textAlign='center';
+  ctx.fillText('δmax='+(maxDef*1000).toFixed(1)+'mm', xToCanvas(xs[maxDefIdx]), beamY+defs[maxDefIdx]*ds+15);
+
+  // BMD — sagging positive (below baseline), hogging negative (above)
+  ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(PL,momBase);
+  xs.forEach((x,i)=>ctx.lineTo(xToCanvas(x), momBase-moms[i]*ms));
+  ctx.lineTo(PL+bW,momBase); ctx.closePath();
+  ctx.fillStyle='rgba(59,130,246,0.12)'; ctx.fill();
+  ctx.strokeStyle='#3b82f6'; ctx.stroke();
+  // Hogging highlight
+  ctx.strokeStyle='rgba(239,68,68,0.6)'; ctx.lineWidth=1;
+  ctx.beginPath(); let hogging=false;
+  xs.forEach((x,i)=>{
+    const cy=momBase-moms[i]*ms;
+    if(cy<momBase){if(!hogging){ctx.moveTo(xToCanvas(x),momBase);hogging=true;}ctx.lineTo(xToCanvas(x),cy);}else{hogging=false;}
+  });
+  ctx.stroke();
+  ctx.font='9px Space Mono,monospace'; ctx.fillStyle='#3b82f6'; ctx.textAlign='left';
+  ctx.fillText('BMD',PL+4,momBase-6);
+
+  // SFD
+  ctx.fillStyle='rgba(249,115,22,0.1)'; ctx.strokeStyle='#f97316'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(PL,shrBase);
+  xs.forEach((x,i)=>ctx.lineTo(xToCanvas(x), shrBase-shrs[i]*ss));
+  ctx.lineTo(PL+bW,shrBase); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#f97316'; ctx.fillText('SFD',PL+4,shrBase-5);
+
+  // Interior support moment labels
+  result.Ms.forEach((M,i)=>{
+    if(i===0||i===result.Ms.length-1) return;
+    const cx=xToCanvas(supportXs[i]);
+    ctx.font='9px Space Mono,monospace'; ctx.fillStyle='rgba(239,68,68,0.8)'; ctx.textAlign='center';
+    ctx.fillText('M='+(M/1000).toFixed(1)+'kNm', cx, momBase+10);
+  });
+
+  // X axis labels
+  ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
+  supportXs.forEach(sx => ctx.fillText(sx.toFixed(1)+'m', xToCanvas(sx), H-6));
+}
+
 // ─── MAIN UPDATE ──────────────────────────────────────────────────────────────
 function go() {
+  // ── Multi-span branch ──
+  if (spanCount > 1) {
+    const p = getParams();
+    lastParams = p;
+    const result = solveMultiSpan(p);
+    const { xs, moms, shrs, defs, totalL } = result;
+
+    const maxDef    = Math.max(...defs.map(Math.abs));
+    const maxMom    = Math.max(...moms.map(Math.abs));
+    const maxShr    = Math.max(...shrs.map(Math.abs));
+    const maxStress = (maxMom * (p.h/2)) / p.sec.I;
+    const SF        = p.fy / maxStress;
+    const Vpl       = shearCapacity(p.sec, p.fy);
+    const allowDef  = Math.min(...spanLengths.slice(0,spanCount)) / 360;
+
+    // Update metrics
+    document.getElementById('mDef').textContent      = (maxDef*1000).toFixed(2) + ' mm';
+    document.getElementById('mDef').className        = 'metric-val ' + (maxDef<=allowDef?'ok':maxDef<=allowDef*1.1?'warn':'fail');
+    document.getElementById('mAllowDef').textContent = (allowDef*1000).toFixed(2) + ' mm';
+    document.getElementById('mMom').textContent      = (maxMom/1000).toFixed(1) + ' kN·m';
+    document.getElementById('mStress').textContent   = (maxStress/1e6).toFixed(1) + ' MPa';
+    document.getElementById('mStress').className     = 'metric-val ' + (maxStress/p.fy<0.9?'ok':maxStress/p.fy<1?'warn':'fail');
+    document.getElementById('mShear').textContent    = (maxShr/1000).toFixed(1) + ' kN';
+    document.getElementById('mShear').className      = 'metric-val ' + (maxShr/Vpl<0.6?'ok':maxShr/Vpl<0.7?'warn':'fail');
+    document.getElementById('mSF').textContent       = SF.toFixed(2);
+    document.getElementById('mSF').className         = 'metric-val ' + (SF>=KS.sf_min?'ok':SF>=1.5?'warn':'fail');
+
+    // KS compliance (reuse existing checker with totalL as representative L)
+    kenyaCheck({...p, L:totalL/spanCount}, maxDef, maxStress, maxMom, maxShr);
+    updateCost();
+
+    if (view==='2d')      draw2dMultiSpan(result, p);
+    if (view==='3d')      draw3d(p, maxDef);
+    if (view==='section') drawSection(p);
+    return;
+  }
   const p = getParams();
   lastParams = p;
   const N  = 200;

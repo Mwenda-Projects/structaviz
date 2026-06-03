@@ -36,8 +36,27 @@
     <div class="sheet-handle-label" id="sheetLabel">Controls ↑</div>
   </div>
 
-  <!-- Beam Type -->
+  <!-- Span Count -->
   <div class="sec">
+    <div class="sec-label">Spans</div>
+    <div class="beam-grid">
+      <div class="btype span-count-btn on" id="spanBtn1" onclick="setSpanCount(1)">
+        <svg width="40" height="14"><line x1="2" y1="8" x2="38" y2="8" stroke="currentColor" stroke-width="2"/><polygon points="0,8 5,14 -5,14" fill="currentColor" transform="translate(4,0)"/><polygon points="0,8 5,14 -5,14" fill="currentColor" transform="translate(36,0)"/></svg>
+        1 Span
+      </div>
+      <div class="btype span-count-btn" id="spanBtn2" onclick="setSpanCount(2)">
+        <svg width="40" height="14"><line x1="2" y1="8" x2="38" y2="8" stroke="currentColor" stroke-width="2"/><polygon points="0,8 4,14 -4,14" fill="currentColor" transform="translate(4,0)"/><line x1="20" y1="4" x2="20" y2="14" stroke="currentColor" stroke-width="1.5"/><polygon points="0,8 4,14 -4,14" fill="currentColor" transform="translate(36,0)"/></svg>
+        2 Spans
+      </div>
+      <div class="btype span-count-btn" id="spanBtn3" onclick="setSpanCount(3)">
+        <svg width="40" height="14"><line x1="2" y1="8" x2="38" y2="8" stroke="currentColor" stroke-width="2"/><polygon points="0,8 4,14 -4,14" fill="currentColor" transform="translate(4,0)"/><line x1="14" y1="4" x2="14" y2="14" stroke="currentColor" stroke-width="1.5"/><line x1="26" y1="4" x2="26" y2="14" stroke="currentColor" stroke-width="1.5"/><polygon points="0,8 4,14 -4,14" fill="currentColor" transform="translate(36,0)"/></svg>
+        3 Spans
+      </div>
+    </div>
+  </div>
+
+  <!-- Single-span beam type (hidden when multi-span) -->
+  <div class="sec" id="singleSpanBeamSec">
     <div class="sec-label">Beam Type</div>
     <div class="beam-grid">
       <div class="btype on" onclick="setBeam('cantilever',this)">
@@ -52,6 +71,15 @@
         <svg width="40" height="14"><rect x="0" y="2" width="6" height="12" fill="currentColor" opacity=".4" rx="1"/><rect x="34" y="2" width="6" height="12" fill="currentColor" opacity=".4" rx="1"/><line x1="6" y1="8" x2="34" y2="8" stroke="currentColor" stroke-width="2"/></svg>
         Fixed–Fixed
       </div>
+    </div>
+  </div>
+
+  <!-- Multi-span controls (hidden when single span) -->
+  <div class="sec" id="multiSpanControls" style="display:none;">
+    <div class="sec-label">Span Configuration</div>
+    <div id="spanControlsWrap"></div>
+    <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:4px;">
+      Continuous beam · Pinned supports · UDL per span
     </div>
   </div>
 
@@ -83,8 +111,8 @@
     </div>
   </div>
 
-  <!-- Load Type -->
-  <div class="sec">
+  <!-- Load Type (single span only) -->
+  <div class="sec" id="singleSpanLoadSec">
     <div class="sec-label">Load Type</div>
     <div class="load-grid">
       <div class="ltype on" onclick="setLoad('point',this)">Point</div>
