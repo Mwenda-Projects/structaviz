@@ -1549,8 +1549,7 @@ function exportReport(){
       <span style="font-family:monospace;font-weight:bold;color:${badgeCol};">${badge}</span></div>`;
   });
 
-  const win=window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  const reportHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
     body{font-family:Outfit,Arial,sans-serif;padding:48px;color:#1e293b;max-width:800px;margin:0 auto;}
     h1{font-size:26px;color:#0f172a;margin-bottom:4px;}
@@ -1611,9 +1610,28 @@ function exportReport(){
     StructaViz v3.1 · Kenya Edition · References: KS 02-104, BS 5950, Eurocode 3<br>
     This report is for educational and preliminary design purposes only. All designs must be verified by a registered structural engineer.
   </div>
-  </body></html>`);
-  win.document.close();
-  setTimeout(()=>{win.print();btn.disabled=false;btn.textContent='⬇ Export PDF Report';},800);
+  </body></html>`;
+
+  // Try window.open first (desktop); fall back to Blob download (mobile/popup-blocked)
+  const win = window.open('', '_blank');
+  if (win && win.document) {
+    win.document.write(reportHTML);
+    win.document.close();
+    setTimeout(() => { win.print(); btn.disabled=false; btn.textContent='⬇ Export PDF Report'; }, 800);
+  } else {
+    // Blob fallback — downloads an HTML file the user can open and print
+    const blob = new Blob([reportHTML], { type: 'text/html' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `StructaViz_Report_${new Date().toISOString().slice(0,10)}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    btn.disabled=false;
+    btn.textContent='⬇ Export PDF Report';
+  }
 }
 
 // ─── RESIZE ───────────────────────────────────────────────────────────────────
