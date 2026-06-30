@@ -1,5 +1,6 @@
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let beam = 'cantilever', load = 'point', sect = 'rect';
+let combinedLoad = false; // when true, point load + UDL applied simultaneously
 let savedSect = 'rect';
 let view = '2d';
 let rotX = 0.4, rotY = 0.5, drag = false, lmx, lmy;
@@ -240,8 +241,23 @@ function setLoad(t, el) {
   el.classList.add('on');
   const labels = { point:'Load (kN)', dist:'Load rate (kN/m)', tri:'Peak rate (kN/m)' };
   document.getElementById('loadLabel').textContent = labels[t];
+  // Combined load only makes sense with point as the primary load
+  const combineWrap = document.getElementById('combineWrap');
+  if (combineWrap) combineWrap.style.display = t === 'point' ? '' : 'none';
+  if (t !== 'point') { combinedLoad = false; document.getElementById('combinedCheck').checked = false; updateCombinedUDLVisibility(); }
   updateLoadPosVisibility();
   go();
+}
+
+function toggleCombined() {
+  combinedLoad = document.getElementById('combinedCheck').checked;
+  updateCombinedUDLVisibility();
+  go();
+}
+
+function updateCombinedUDLVisibility() {
+  const el = document.getElementById('combinedUDLWrap');
+  if (el) el.style.display = combinedLoad ? '' : 'none';
 }
 
 function setView(v, el) {
@@ -302,6 +318,74 @@ function shearCapacity(sec, fy) {
   return 0.6 * fy * Av;
 }
 
+// ─── REACTION FORCES ─────────────────────────────────────────────────────────
+// Returns { RL, RR, MA, MB } in N (and N·m for moments at fixed ends).
+// MA/MB are fixed-end moments (non-zero only for fixed-fixed beam).
+function getReactions(p) {
+  const { P, w, L, sw, a } = p;
+  const b_ = L - a;
+  let RL = 0, RR = 0, MA = 0, MB = 0;
+
+  // Applied load reactions
+  if (load === 'point') {
+    if (beam === 'cantilever') {
+      RL = P; RR = 0; MA = P * a;
+    } else if (beam === 'simply') {
+      RL = (P * b_) / L; RR = (P * a) / L;
+    } else { // fixed-fixed
+      MA = (P * a * b_ * b_) / (L * L);
+      MB = (P * a * a * b_) / (L * L);
+      RL = (P * b_) / L + (MA - MB) / L;
+      RR = P - RL;
+    }
+    // Superimpose combined UDL if active
+    if (combinedLoad && w > 0) {
+      if (beam === 'cantilever') {
+        RL += w * L; MA += (w * L * L) / 2;
+      } else if (beam === 'simply') {
+        RL += (w * L) / 2; RR += (w * L) / 2;
+      } else {
+        MA += (w * L * L) / 12; MB += (w * L * L) / 12;
+        RL += (w * L) / 2; RR += (w * L) / 2;
+      }
+    }
+  } else if (load === 'dist') {
+    if (beam === 'cantilever') {
+      RL = w * L; RR = 0; MA = (w * L * L) / 2;
+    } else if (beam === 'simply') {
+      RL = RR = (w * L) / 2;
+    } else {
+      MA = MB = (w * L * L) / 12;
+      RL = RR = (w * L) / 2;
+    }
+  } else if (load === 'tri') {
+    if (beam === 'cantilever') {
+      RL = (w * L) / 2; RR = 0; MA = (w * L * L) / 6;
+    } else if (beam === 'simply') {
+      RL = (w * L) / 6; RR = (w * L) / 3;
+    } else {
+      MA =  (w * L * L) / 20;
+      MB = -(w * L * L) / 30;
+      RL = (w * L) / 6 - (MA - MB) / L;
+      RR = (w * L) / 2 - RL;
+    }
+  }
+
+  // Add self-weight contribution
+  if (sw > 0) {
+    if (beam === 'cantilever') {
+      RL += sw * L; MA += (sw * L * L) / 2;
+    } else if (beam === 'simply') {
+      RL += (sw * L) / 2; RR += (sw * L) / 2;
+    } else {
+      RL += (sw * L) / 2; RR += (sw * L) / 2;
+      MA += (sw * L * L) / 12; MB += (sw * L * L) / 12;
+    }
+  }
+
+  return { RL, RR, MA, MB };
+}
+
 // ─── PARAMETER COLLECTION ────────────────────────────────────────────────────
 function getParams() {
   const matStr  = document.getElementById('sMat').value.split(',');
@@ -311,7 +395,8 @@ function getParams() {
   const L       = parseFloat(document.getElementById('sLen').value);
   const sliderVal = parseFloat(document.getElementById('sLoad').value) * 1000;
   const P  = load === 'point' ? sliderVal : 0;
-  const w  = (load === 'dist' || load === 'tri') ? sliderVal : 0;
+  const w  = (load === 'dist' || load === 'tri') ? sliderVal
+           : (combinedLoad ? (parseFloat(document.getElementById('sCombinedUDL').value)||0) * 1000 : 0);
   const a  = getLoadPos() * L;   // absolute load position for point loads
   const h  = stdSectionOverride ? stdSectionOverride.h : parseFloat(document.getElementById('sH').value)/1000;
   const ratio = parseFloat(document.getElementById('sR').value)/10;
@@ -524,6 +609,99 @@ function kenyaCheck(p, maxDef, maxStress, maxMom, maxShr) {
       <span class="code-badge ${bcls}">${lbl}</span></div>`;
   });
   return allowDef;
+}
+
+// ─── SECTION OPTIMIZER ───────────────────────────────────────────────────────
+// Scans all standard sections and returns the lightest one that passes all
+// KS 02-104 checks for the current beam configuration.
+function optimizeSection() {
+  const btn = document.getElementById('optimizeBtn');
+  const resultEl = document.getElementById('optimizeResult');
+  btn.disabled = true;
+  btn.textContent = 'Scanning…';
+  resultEl.style.display = 'none';
+
+  const p = getParams();
+  const N = 100;
+  const xs = Array.from({length: N + 1}, (_, i) => p.L * i / N);
+
+  // Helper: run compliance checks against a candidate section override
+  function testSection(candidate) {
+    // Temporarily swap section properties
+    const savedOverride = stdSectionOverride;
+    stdSectionOverride = candidate;
+
+    const testP = getParams(); // re-reads with new override
+    const defs  = xs.map(x => defAt(x, testP));
+    const moms  = xs.map(x => momAt(x, testP));
+    const shrs  = xs.map(x => shearAt(x, testP));
+
+    const maxDef    = Math.max(...defs);
+    const maxMom    = Math.max(...moms.map(Math.abs));
+    const maxShr    = Math.max(...shrs.map(Math.abs));
+    const maxStress = (maxMom * (testP.h / 2)) / testP.sec.I;
+    const SF        = testP.fy / maxStress;
+    const deflRatio = beam === 'cantilever' ? 180 : 360;
+    const allowDef  = testP.L / deflRatio;
+    const Vpl       = shearCapacity(testP.sec, testP.fy);
+
+    stdSectionOverride = savedOverride; // restore
+
+    const passDefl   = maxDef <= allowDef;
+    const passStress = maxStress / testP.fy <= KS.stress_util_max;
+    const passShear  = maxShr / Vpl <= 0.60;
+    const passSF     = SF >= KS.sf_min;
+    const passSection= (maxMom / (testP.fy * testP.sec.I / (testP.h / 2))) < 0.9;
+
+    return passDefl && passStress && passShear && passSF && passSection;
+  }
+
+  // Flatten all sections with their kg/m for sorting by mass
+  const allSections = [];
+  ['UB','UC','RHS','CHS'].forEach(cat => {
+    STD_SECTIONS[cat].forEach(s => {
+      const h = s.h / 1000, b = s.b / 1000;
+      const I = s.I * 1e-8, A = s.A * 1e-4;
+      const type = (cat==='UB'||cat==='UC') ? 'ibeam' : cat==='CHS' ? 'circ' : 'hollow';
+      allSections.push({ name: s.name, cat, kg_m: s.kg_m, I, A, b, h, type });
+    });
+  });
+
+  // Sort lightest first, then find the first passing section
+  allSections.sort((a, b) => a.kg_m - b.kg_m);
+  const winner = allSections.find(s => testSection(s));
+
+  btn.disabled = false;
+  btn.textContent = '⚡ Find Lightest Section';
+
+  if (!winner) {
+    resultEl.style.display = 'block';
+    resultEl.className = 'optimize-result fail';
+    resultEl.innerHTML = '<strong>No passing section found</strong><br>Try reducing the load or span.';
+    return;
+  }
+
+  resultEl.style.display = 'block';
+  resultEl.className = 'optimize-result pass';
+  resultEl.innerHTML =
+    `<div class="optimize-name">${winner.name}</div>` +
+    `<div class="optimize-meta">${winner.kg_m} kg/m · ${winner.cat}</div>` +
+    `<button class="optimize-apply-btn" onclick="applyOptimizedSection('${winner.cat}','${winner.name}')">Apply this section →</button>`;
+}
+
+function applyOptimizedSection(cat, name) {
+  // Switch UI to std library mode and select the winning section
+  setSectionMode('std');
+  document.getElementById('stdCat').value = cat;
+  populateStdSections();
+  const options = document.getElementById('stdSec').options;
+  for (let i = 0; i < options.length; i++) {
+    if (options[i].text === name) {
+      document.getElementById('stdSec').selectedIndex = i;
+      applyStdSection();
+      break;
+    }
+  }
 }
 
 // ─── COST ESTIMATOR ───────────────────────────────────────────────────────────
@@ -747,6 +925,25 @@ function draw2dMultiSpan(result, p) {
     ctx.fillText('M='+(M/1000).toFixed(1)+'kNm', cx, momBase+10);
   });
 
+  // Reaction forces at each support (from span equilibrium)
+  ctx.font='10px Space Mono,monospace'; ctx.fillStyle='rgba(0,200,150,0.9)'; ctx.textAlign='center';
+  const spansSlice = spanLengths.slice(0, spanCount);
+  const loadsSlice = spanLoads.slice(0, spanCount).map(v => v * 1000);
+  const Ms = result.Ms;
+  spansSlice.forEach((Ls, si) => {
+    const w  = loadsSlice[si];
+    const ML = Ms[si], MR = Ms[si + 1];
+    const RL = w * Ls / 2 + (ML - MR) / Ls;
+    const RR = w * Ls - RL;
+    // Left support of span gets RL, right support gets RR (accumulate if interior)
+    const xL = xToCanvas(supportXs[si]);
+    const xR = xToCanvas(supportXs[si + 1]);
+    if (si === 0) ctx.fillText('R=' + (RL / 1000).toFixed(1) + 'kN', xL, beamY + 30);
+    // Interior supports: show combined reaction from both adjacent spans
+    const combinedR = si === 0 ? RR : RR + (loadsSlice[si - 1] * spansSlice[si - 1] / 2 + (Ms[si - 1] - Ms[si]) / spansSlice[si - 1]);
+    ctx.fillText('R=' + (si === spanCount - 1 ? (RR / 1000).toFixed(1) : (combinedR / 1000).toFixed(1)) + 'kN', xR, beamY + 30);
+  });
+
   // X axis labels
   ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
   supportXs.forEach(sx => ctx.fillText(sx.toFixed(1)+'m', xToCanvas(sx), H-6));
@@ -875,12 +1072,27 @@ function draw2d(xs, defs, moms, shrs, p, allowDef) {
   // Load arrows — point load position is driven by slider
   ctx.strokeStyle='#f97316'; ctx.fillStyle='#f97316'; ctx.lineWidth=1.5;
   if(load==='point'){
+    // Point load arrow
     const posFrac = getLoadPos();
-    const ax = beam==='cantilever' ? PL + bW*posFrac : PL + bW*posFrac;
-    ctx.beginPath(); ctx.moveTo(ax,beamY-34); ctx.lineTo(ax,beamY-5); ctx.stroke();
+    const ax = PL + bW*posFrac;
+    const arrowTop = combinedLoad ? beamY-52 : beamY-34;
+    ctx.beginPath(); ctx.moveTo(ax,arrowTop); ctx.lineTo(ax,beamY-5); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(ax-5,beamY-12); ctx.lineTo(ax,beamY); ctx.lineTo(ax+5,beamY-12); ctx.fill();
     ctx.font='10px Space Mono,monospace'; ctx.textAlign='center';
-    ctx.fillText(document.getElementById('sLoad').value+'kN', ax, beamY-38);
+    ctx.fillText(document.getElementById('sLoad').value+'kN', ax, arrowTop-4);
+    // Combined UDL arrows (drawn lighter, above point arrow line)
+    if(combinedLoad && p.w > 0){
+      ctx.strokeStyle='rgba(249,115,22,0.45)'; ctx.fillStyle='rgba(249,115,22,0.45)'; ctx.lineWidth=1;
+      const udlSteps=10;
+      for(let i=0;i<=udlSteps;i++){
+        const ux=PL+bW*i/udlSteps;
+        ctx.beginPath();ctx.moveTo(ux,beamY-70);ctx.lineTo(ux,beamY-56);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(ux-3,beamY-62);ctx.lineTo(ux,beamY-52);ctx.lineTo(ux+3,beamY-62);ctx.fill();
+      }
+      ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
+      ctx.fillText('UDL '+(p.w/1000).toFixed(0)+'kN/m', PL+bW/2, beamY-73);
+      ctx.strokeStyle='#f97316'; ctx.fillStyle='#f97316'; ctx.lineWidth=1.5;
+    }
   } else {
     const steps=10;
     for(let i=0;i<=steps;i++){
@@ -933,6 +1145,23 @@ function draw2d(xs, defs, moms, shrs, p, allowDef) {
   xs.forEach((x,i)=>ctx.lineTo(PL+bW*i/N, shrBase-shrs[i]*ss));
   ctx.lineTo(PL+bW,shrBase); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle='#f97316'; ctx.fillText('SFD',PL+4,shrBase-5);
+
+  // Reaction forces
+  const rxn = getReactions(p);
+  ctx.font='10px Space Mono,monospace'; ctx.fillStyle='rgba(0,200,150,0.9)'; ctx.textAlign='center';
+  if (beam === 'cantilever') {
+    ctx.fillText('R=' + (rxn.RL/1000).toFixed(1) + 'kN', PL, beamY + 28);
+    if (rxn.MA > 0)
+      ctx.fillText('M=' + (rxn.MA/1000).toFixed(1) + 'kNm', PL, beamY + 41);
+  } else if (beam === 'simply') {
+    ctx.fillText('RL=' + (rxn.RL/1000).toFixed(1) + 'kN', PL, beamY + 28);
+    ctx.fillText('RR=' + (rxn.RR/1000).toFixed(1) + 'kN', PL+bW, beamY + 28);
+  } else {
+    ctx.fillText('RL=' + (rxn.RL/1000).toFixed(1) + 'kN', PL, beamY + 28);
+    ctx.fillText('RR=' + (rxn.RR/1000).toFixed(1) + 'kN', PL+bW, beamY + 28);
+    ctx.fillText('MA=' + (rxn.MA/1000).toFixed(1) + 'kNm', PL, beamY + 41);
+    ctx.fillText('MB=' + (rxn.MB/1000).toFixed(1) + 'kNm', PL+bW, beamY + 41);
+  }
 
   // X axis
   ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
@@ -1160,7 +1389,7 @@ async function sendAI(){
   const thinkEl=appendAIMessage('assistant thinking','Analysing your design…');
 
   const context=getDesignContext();
-  const system=`You are StructaViz AI, a structural engineering assistant specialising in Kenyan construction practice and the KS 02-104 standard (Kenya Standard for structural steel design, aligned with BS 5950 and Eurocode 3). You are embedded in StructaViz, a beam analysis tool. You have real-time access to the user's current design parameters and results. Be concise, practical, and educational — your audience is engineering students at Technical University of Kenya. Use SI units and reference KS 02-104 clause numbers where relevant. Costs are in Kenyan Shillings (KES). When suggesting improvements, be specific about which parameter to change and by how much.`;
+  const system=`You are StructaViz AI, a structural engineering assistant specialising in Kenyan construction practice and the KS 02-104 standard (Kenya Standard for structural steel design, aligned with BS 5950 and Eurocode 3). You are embedded in StructaViz, a beam analysis tool. You have real-time access to the user's current design parameters and results. Be concise, practical, and educational — your audience is engineering students and practicing engineers in Kenya. Use SI units and reference KS 02-104 clause numbers where relevant. Costs are in Kenyan Shillings (KES). When suggesting improvements, be specific about which parameter to change and by how much.`;
 
   const fullMessage=`${context}\n\nUser question: ${msg}`;
   const messages=[...aiHistory, {role:'user', content: fullMessage}];
@@ -1337,7 +1566,7 @@ function exportReport(){
     .footer{margin-top:40px;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:14px;}
   </style></head><body>
   <h1>StructaViz — Structural Analysis Report</h1>
-  <div class="sub">Generated ${new Date().toLocaleString()} · Kenya Edition v3.1 · Technical University of Kenya / CITT</div>
+  <div class="sub">Generated ${new Date().toLocaleString()} · StructaViz Kenya Edition v3.1 · KS 02-104 · BS 5950 · Eurocode 3</div>
   <div class="stamp ${(compliant.includes('COMPLIANT')&&!compliant.includes('NON'))?'ok':'fail'}">
     ${(compliant.includes('COMPLIANT')&&!compliant.includes('NON'))?'✓':'✗'} ${compliant}
   </div>
@@ -1360,6 +1589,11 @@ function exportReport(){
     <tr><td>Max bending stress</td><td>${document.getElementById('mStress').textContent}</td><td>${(p.fy/1e6).toFixed(0)} MPa (fy)</td></tr>
     <tr><td>Max shear force</td><td>${document.getElementById('mShear').textContent}</td><td>${(Vpl/1000).toFixed(1)} kN (Vpl)</td></tr>
     <tr><td>Safety factor</td><td>${document.getElementById('mSF').textContent}</td><td>≥ 1.67</td></tr>
+    ${(()=>{const r=getReactions(p);
+      if(beam==='cantilever') return `<tr><td>Support reaction</td><td>${(r.RL/1000).toFixed(2)} kN</td><td>—</td></tr><tr><td>Fixed-end moment</td><td>${(r.MA/1000).toFixed(2)} kN·m</td><td>—</td></tr>`;
+      if(beam==='simply') return `<tr><td>Left reaction (RL)</td><td>${(r.RL/1000).toFixed(2)} kN</td><td>—</td></tr><tr><td>Right reaction (RR)</td><td>${(r.RR/1000).toFixed(2)} kN</td><td>—</td></tr>`;
+      return `<tr><td>Left reaction (RL)</td><td>${(r.RL/1000).toFixed(2)} kN</td><td>—</td></tr><tr><td>Right reaction (RR)</td><td>${(r.RR/1000).toFixed(2)} kN</td><td>—</td></tr><tr><td>Fixed-end moment MA</td><td>${(r.MA/1000).toFixed(2)} kN·m</td><td>—</td></tr><tr><td>Fixed-end moment MB</td><td>${(r.MB/1000).toFixed(2)} kN·m</td><td>—</td></tr>`;
+    })()}
   </table>
   <h2>KS 02-104 Compliance Checks</h2>
   ${checksHTML}
@@ -1375,7 +1609,6 @@ function exportReport(){
   <img src="${imgData}"/>
   <div class="footer">
     StructaViz v3.1 · Kenya Edition · References: KS 02-104, BS 5950, Eurocode 3<br>
-    Technical University of Kenya · Centre for Innovation and Technology Transfer (CITT)<br>
     This report is for educational and preliminary design purposes only. All designs must be verified by a registered structural engineer.
   </div>
   </body></html>`);
@@ -1389,6 +1622,7 @@ window.addEventListener('resize',go);
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 updateLoadPosVisibility();
 updatePosLabel();
+updateCombinedUDLVisibility();
 buildSectionGrid();
 populateStdSections();
 go();

@@ -136,6 +136,23 @@
         Include self-weight
       </label>
     </div>
+    <!-- Combined loading — only visible when Point load is selected -->
+    <div id="combineWrap" style="margin-top:10px;display:none;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2);">
+        <input type="checkbox" id="combinedCheck" onchange="toggleCombined()" style="accent-color:var(--accent2);width:13px;height:13px;">
+        Add UDL (combined loading)
+      </label>
+      <div id="combinedUDLWrap" style="display:none;margin-top:8px;">
+        <div class="ctrl">
+          <div class="ctrl-row">
+            <span class="ctrl-name">UDL rate (kN/m)</span>
+            <span class="ctrl-val" id="vCombinedUDL">10</span>
+          </div>
+          <input type="range" id="sCombinedUDL" min="1" max="200" value="10"
+                 oninput="sv('vCombinedUDL',this.value,'');go()">
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Parameters -->
@@ -179,6 +196,16 @@
       <span id="stampText">COMPLIANT</span>
     </div>
     <div class="code-results" id="codeResults"></div>
+  </div>
+
+  <!-- Section Optimizer -->
+  <div class="sec">
+    <div class="sec-label">Section Optimizer</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5;">
+      Finds the lightest UB/UC/RHS/CHS section that passes all KS 02-104 checks for your current load and span.
+    </div>
+    <button class="optimize-btn" id="optimizeBtn" onclick="optimizeSection()">⚡ Find Lightest Section</button>
+    <div class="optimize-result" id="optimizeResult" style="display:none;"></div>
   </div>
 
   <!-- Cost Estimator -->

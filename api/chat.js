@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No messages provided' });
   }
 
-  const system = `You are StructaViz AI, a structural engineering assistant built for students and engineers at Technical University of Kenya. You are embedded in a live beam analysis tool and can see the user's exact design parameters and results.
+  const system = `You are StructaViz AI, a structural engineering assistant built for students and practicing engineers in Kenya. You are embedded in a live beam analysis tool and can see the user's exact design parameters and results.
 
 STRICT RESPONSE RULES — follow every one without exception:
 
