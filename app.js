@@ -1643,6 +1643,152 @@ function exportReport(){
   }
 }
 
+// ─── SAVED PROJECTS ───────────────────────────────────────────────────────────
+const SAVE_KEY = 'structaviz_saves';
+const MAX_SAVES = 5;
+
+function getSaves() {
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || []; }
+  catch { return []; }
+}
+
+function captureState() {
+  return {
+    name:         '',
+    savedAt:      new Date().toISOString(),
+    beam,
+    load,
+    combinedLoad,
+    sectionMode,
+    sect,
+    spanCount,
+    spanLengths:  [...spanLengths],
+    spanLoads:    [...spanLoads],
+    sLoad:        document.getElementById('sLoad').value,
+    sLen:         document.getElementById('sLen').value,
+    sH:           document.getElementById('sH').value,
+    sR:           document.getElementById('sR').value,
+    sMat:         document.getElementById('sMat').value,
+    selfWeight:   document.getElementById('selfWeight').checked,
+    sPos:         document.getElementById('sPos').value,
+    sCombinedUDL: document.getElementById('sCombinedUDL')?.value || '10',
+    pricePerKg:   document.getElementById('pricePerKg').value,
+    stdCat:       document.getElementById('stdCat').value,
+    stdSec:       document.getElementById('stdSec').value,
+  };
+}
+
+function restoreState(s) {
+  // Beam & load type
+  beam = s.beam || 'cantilever';
+  document.querySelectorAll('.btype').forEach(b => b.classList.remove('on'));
+  const beamMap = { cantilever: 0, simply: 1, fixed: 2 };
+  document.querySelectorAll('#singleSpanBeamSec .btype')[beamMap[beam]]?.classList.add('on');
+
+  load = s.load || 'point';
+  document.querySelectorAll('.ltype').forEach(b => b.classList.remove('on'));
+  const loadMap = { point: 0, dist: 1, tri: 2 };
+  document.querySelectorAll('.ltype')[loadMap[load]]?.classList.add('on');
+  document.getElementById('loadLabel').textContent =
+    { point:'Load (kN)', dist:'Load rate (kN/m)', tri:'Peak rate (kN/m)' }[load];
+
+  // Sliders
+  document.getElementById('sLoad').value = s.sLoad;
+  document.getElementById('sLen').value  = s.sLen;
+  document.getElementById('sH').value    = s.sH;
+  document.getElementById('sR').value    = s.sR;
+  document.getElementById('sPos').value  = s.sPos;
+  if (document.getElementById('sCombinedUDL')) document.getElementById('sCombinedUDL').value = s.sCombinedUDL;
+  sv('vLoad', s.sLoad, ''); sv('vLen', s.sLen, '');
+  sv('vH', s.sH, ''); sv('vR', (s.sR/10).toFixed(1), '');
+  document.getElementById('vCombinedUDL') && sv('vCombinedUDL', s.sCombinedUDL, '');
+
+  // Selects
+  document.getElementById('sMat').value = s.sMat;
+  document.getElementById('selfWeight').checked = s.selfWeight;
+  document.getElementById('pricePerKg').value   = s.pricePerKg;
+
+  // Combined load
+  combinedLoad = s.combinedLoad || false;
+  if (document.getElementById('combinedCheck')) document.getElementById('combinedCheck').checked = combinedLoad;
+  updateCombinedUDLVisibility();
+
+  // Multi-span
+  spanCount = s.spanCount || 1;
+  spanLengths = s.spanLengths || [8,8,8];
+  spanLoads   = s.spanLoads   || [50,50,50];
+  setSpanCount(spanCount, true);
+
+  // Section mode
+  sectionMode = s.sectionMode || 'custom';
+  setSectionMode(sectionMode, true);
+  if (sectionMode === 'std') {
+    document.getElementById('stdCat').value = s.stdCat;
+    populateStdSections();
+    document.getElementById('stdSec').value = s.stdSec;
+    applyStdSection();
+  } else {
+    sect = s.sect || 'rect';
+    buildSectionGrid();
+  }
+
+  updateLoadPosVisibility();
+  updatePosLabel();
+  go();
+}
+
+function saveProject() {
+  const saves = getSaves();
+  if (saves.length >= MAX_SAVES) {
+    alert(`You have ${MAX_SAVES} saves already. Delete one first.`);
+    return;
+  }
+  const name = prompt('Name this project:', 'Beam ' + (saves.length + 1));
+  if (!name) return;
+  const state  = captureState();
+  state.name   = name.trim() || 'Untitled';
+  state.savedAt = new Date().toISOString();
+  saves.push(state);
+  localStorage.setItem(SAVE_KEY, JSON.stringify(saves));
+  renderSaves();
+}
+
+function loadProject(idx) {
+  const saves = getSaves();
+  if (!saves[idx]) return;
+  restoreState(saves[idx]);
+}
+
+function deleteProject(idx) {
+  const saves = getSaves();
+  saves.splice(idx, 1);
+  localStorage.setItem(SAVE_KEY, JSON.stringify(saves));
+  renderSaves();
+}
+
+function renderSaves() {
+  const saves = getSaves();
+  const list  = document.getElementById('savesList');
+  if (!list) return;
+  if (saves.length === 0) {
+    list.innerHTML = '<div class="saves-empty">No saved projects yet.</div>';
+    return;
+  }
+  list.innerHTML = saves.map((s, i) => {
+    const date = new Date(s.savedAt).toLocaleDateString('en-KE', { day:'numeric', month:'short' });
+    return `<div class="save-item">
+      <div class="save-info">
+        <div class="save-name">${s.name}</div>
+        <div class="save-meta">${date} · ${s.beam} · ${s.sLen}m</div>
+      </div>
+      <div class="save-actions">
+        <button class="save-load-btn" onclick="loadProject(${i})">Load</button>
+        <button class="save-del-btn" onclick="deleteProject(${i})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ─── RESIZE ───────────────────────────────────────────────────────────────────
 window.addEventListener('resize',go);
 
@@ -1652,4 +1798,5 @@ updatePosLabel();
 updateCombinedUDLVisibility();
 buildSectionGrid();
 populateStdSections();
+renderSaves();
 go();
