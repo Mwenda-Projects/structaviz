@@ -16,11 +16,6 @@
     <span class="brand-ver">v3.1</span>
   </div>
   <div class="topbar-right">
-    <select id="themeSelect" class="theme-select" onchange="setTheme(this.value)">
-      <option value="dark">Dark</option>
-      <option value="light">Light</option>
-      <option value="device">Device</option>
-    </select>
     <span class="pill kenya">KS 02-104</span>
     <span class="pill">Kenya Edition</span>
     <span class="pill">FEA Engine</span>
@@ -34,6 +29,18 @@
   <div class="sheet-handle" id="sheetHandle" onclick="toggleSheet()">
     <div class="sheet-handle-bar"></div>
     <div class="sheet-handle-label" id="sheetLabel">Controls ↑</div>
+  </div>
+
+  <!-- Theme selector — inside sidebar for all screen sizes -->
+  <div class="sec" style="padding:10px 14px;">
+    <div class="ctrl-row">
+      <span class="ctrl-name">Theme</span>
+      <select id="themeSelect" class="theme-select" onchange="setTheme(this.value)">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+        <option value="device">Device</option>
+      </select>
+    </div>
   </div>
 
   <!-- Span Count -->
@@ -231,7 +238,13 @@
 
 <!-- MAIN -->
 <div class="main">
-  <!-- 6-metric strip — added Max shear -->
+  <!-- Mobile compliance status bar -->
+  <div class="mobile-status-bar" id="mobileStatusBar">
+    <div class="msb-dot" id="msbDot"></div>
+    <span id="msbText">KS 02-104 COMPLIANT</span>
+  </div>
+
+  <!-- 5-metric strip -->
   <div class="metrics">
     <div class="metric"><div class="metric-label">Max deflection</div><div class="metric-val" id="mDef">—</div></div>
     <div class="metric"><div class="metric-label">Allow. deflection</div><div class="metric-val" id="mAllowDef">—</div></div>

@@ -598,6 +598,15 @@ function kenyaCheck(p, maxDef, maxStress, maxMom, maxShr) {
   document.getElementById('stampText').textContent = allPass ? 'KS 02-104 COMPLIANT' : 'NON-COMPLIANT';
   stamp.className = 'stamp ' + (allPass?'ok':'fail');
 
+  // Sync mobile status bar
+  const msbDot  = document.getElementById('msbDot');
+  const msbText = document.getElementById('msbText');
+  if (msbDot && msbText) {
+    msbDot.className  = 'msb-dot ' + (allPass ? 'ok' : 'fail');
+    msbText.textContent = allPass ? 'KS 02-104 COMPLIANT' : 'NON-COMPLIANT';
+    document.getElementById('mobileStatusBar').className = 'mobile-status-bar ' + (allPass ? 'ok' : 'fail');
+  }
+
   const cr = document.getElementById('codeResults');
   cr.innerHTML = '';
   checks.forEach(c => {
