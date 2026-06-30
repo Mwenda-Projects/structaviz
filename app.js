@@ -102,36 +102,41 @@ const SECTIONS = {
 const KS = { sf_min: 1.67, stress_util_max: 0.90 };
 
 // ─── STANDARD SECTION LIBRARY ────────────────────────────────────────────────
+// UB/UC include LTB properties per BS 4 / BS 5950 Table 19:
+//   ry  = minor axis radius of gyration (cm)
+//   Sx  = plastic modulus major axis (cm³)
+//   u   = buckling parameter
+//   x   = torsional index
 const STD_SECTIONS = {
   UB: [
-    {name:'UB 127×76×13',  h:127,  b:76,   I:473,   A:16.5,  tw:4.0, tf:7.6,  kg_m:13},
-    {name:'UB 152×89×16',  h:152,  b:89,   I:834,   A:20.3,  tw:4.5, tf:7.7,  kg_m:16},
-    {name:'UB 178×102×19', h:178,  b:102,  I:1356,  A:24.3,  tw:4.8, tf:7.9,  kg_m:19},
-    {name:'UB 203×102×23', h:203,  b:102,  I:2105,  A:29.4,  tw:5.4, tf:9.3,  kg_m:23},
-    {name:'UB 203×133×25', h:203,  b:133,  I:2340,  A:32.0,  tw:5.7, tf:7.8,  kg_m:25},
-    {name:'UB 254×102×22', h:254,  b:102,  I:2841,  A:28.0,  tw:5.1, tf:6.8,  kg_m:22},
-    {name:'UB 254×146×31', h:254,  b:146,  I:4413,  A:39.7,  tw:6.1, tf:8.6,  kg_m:31},
-    {name:'UB 305×102×25', h:305,  b:102,  I:4455,  A:31.7,  tw:5.8, tf:7.0,  kg_m:25},
-    {name:'UB 305×127×37', h:305,  b:127,  I:7162,  A:47.2,  tw:7.2, tf:10.7, kg_m:37},
-    {name:'UB 305×165×40', h:305,  b:165,  I:8503,  A:51.3,  tw:6.1, tf:10.2, kg_m:40},
-    {name:'UB 356×127×33', h:356,  b:127,  I:8196,  A:42.1,  tw:6.0, tf:8.5,  kg_m:33},
-    {name:'UB 356×171×45', h:356,  b:171,  I:12070, A:57.3,  tw:7.0, tf:9.7,  kg_m:45},
-    {name:'UB 406×140×39', h:406,  b:140,  I:12452, A:49.7,  tw:6.4, tf:8.6,  kg_m:39},
-    {name:'UB 406×178×54', h:406,  b:178,  I:18720, A:68.8,  tw:7.7, tf:10.9, kg_m:54},
-    {name:'UB 457×152×52', h:457,  b:152,  I:21345, A:66.6,  tw:7.6, tf:10.9, kg_m:52},
-    {name:'UB 457×191×67', h:457,  b:191,  I:29380, A:85.5,  tw:8.5, tf:12.7, kg_m:67},
-    {name:'UB 533×210×82', h:533,  b:209,  I:47540, A:104.4, tw:9.6, tf:13.2, kg_m:82},
-    {name:'UB 610×229×101',h:610,  b:227,  I:75780, A:128.6, tw:10.6,tf:14.8, kg_m:101},
+    {name:'UB 127×76×13',  h:127,  b:76,   I:473,   A:16.5,  tw:4.0, tf:7.6,  kg_m:13,  ry:1.84, Sx:84.2,  u:0.855, x:16.3},
+    {name:'UB 152×89×16',  h:152,  b:89,   I:834,   A:20.3,  tw:4.5, tf:7.7,  kg_m:16,  ry:2.09, Sx:123,   u:0.869, x:19.6},
+    {name:'UB 178×102×19', h:178,  b:102,  I:1356,  A:24.3,  tw:4.8, tf:7.9,  kg_m:19,  ry:2.37, Sx:171,   u:0.874, x:23.3},
+    {name:'UB 203×102×23', h:203,  b:102,  I:2105,  A:29.4,  tw:5.4, tf:9.3,  kg_m:23,  ry:2.36, Sx:234,   u:0.853, x:23.5},
+    {name:'UB 203×133×25', h:203,  b:133,  I:2340,  A:32.0,  tw:5.7, tf:7.8,  kg_m:25,  ry:3.10, Sx:259,   u:0.882, x:28.7},
+    {name:'UB 254×102×22', h:254,  b:102,  I:2841,  A:28.0,  tw:5.1, tf:6.8,  kg_m:22,  ry:2.22, Sx:258,   u:0.846, x:30.1},
+    {name:'UB 254×146×31', h:254,  b:146,  I:4413,  A:39.7,  tw:6.1, tf:8.6,  kg_m:31,  ry:3.36, Sx:393,   u:0.877, x:30.9},
+    {name:'UB 305×102×25', h:305,  b:102,  I:4455,  A:31.7,  tw:5.8, tf:7.0,  kg_m:25,  ry:2.23, Sx:336,   u:0.846, x:37.3},
+    {name:'UB 305×127×37', h:305,  b:127,  I:7162,  A:47.2,  tw:7.2, tf:10.7, kg_m:37,  ry:2.90, Sx:539,   u:0.872, x:31.3},
+    {name:'UB 305×165×40', h:305,  b:165,  I:8503,  A:51.3,  tw:6.1, tf:10.2, kg_m:40,  ry:3.86, Sx:623,   u:0.891, x:33.7},
+    {name:'UB 356×127×33', h:356,  b:127,  I:8196,  A:42.1,  tw:6.0, tf:8.5,  kg_m:33,  ry:2.86, Sx:539,   u:0.862, x:42.7},
+    {name:'UB 356×171×45', h:356,  b:171,  I:12070, A:57.3,  tw:7.0, tf:9.7,  kg_m:45,  ry:3.84, Sx:775,   u:0.880, x:38.4},
+    {name:'UB 406×140×39', h:406,  b:140,  I:12452, A:49.7,  tw:6.4, tf:8.6,  kg_m:39,  ry:2.87, Sx:718,   u:0.859, x:49.5},
+    {name:'UB 406×178×54', h:406,  b:178,  I:18720, A:68.8,  tw:7.7, tf:10.9, kg_m:54,  ry:3.85, Sx:1060,  u:0.877, x:41.3},
+    {name:'UB 457×152×52', h:457,  b:152,  I:21345, A:66.6,  tw:7.6, tf:10.9, kg_m:52,  ry:3.11, Sx:1100,  u:0.861, x:47.5},
+    {name:'UB 457×191×67', h:457,  b:191,  I:29380, A:85.5,  tw:8.5, tf:12.7, kg_m:67,  ry:4.12, Sx:1470,  u:0.872, x:43.9},
+    {name:'UB 533×210×82', h:533,  b:209,  I:47540, A:104.4, tw:9.6, tf:13.2, kg_m:82,  ry:4.38, Sx:2060,  u:0.875, x:49.4},
+    {name:'UB 610×229×101',h:610,  b:227,  I:75780, A:128.6, tw:10.6,tf:14.8, kg_m:101, ry:4.75, Sx:2880,  u:0.877, x:51.5},
   ],
   UC: [
-    {name:'UC 152×152×23', h:152,  b:152,  I:1250,  A:29.8,  tw:6.1, tf:6.8,  kg_m:23},
-    {name:'UC 152×152×37', h:161,  b:154,  I:2210,  A:47.1,  tw:8.0, tf:11.5, kg_m:37},
-    {name:'UC 203×203×46', h:203,  b:203,  I:4568,  A:58.8,  tw:7.2, tf:11.0, kg_m:46},
-    {name:'UC 203×203×60', h:210,  b:206,  I:6125,  A:76.4,  tw:9.4, tf:14.2, kg_m:60},
-    {name:'UC 254×254×73', h:254,  b:254,  I:11410, A:93.1,  tw:8.6, tf:14.2, kg_m:73},
-    {name:'UC 254×254×89', h:260,  b:256,  I:14270, A:113.8, tw:10.5,tf:17.3, kg_m:89},
-    {name:'UC 305×305×97', h:308,  b:305,  I:22250, A:123.3, tw:9.9, tf:15.4, kg_m:97},
-    {name:'UC 305×305×118',h:314,  b:307,  I:27700, A:150.2, tw:11.9,tf:18.7, kg_m:118},
+    {name:'UC 152×152×23', h:152,  b:152,  I:1250,  A:29.8,  tw:6.1, tf:6.8,  kg_m:23,  ry:3.68, Sx:182,   u:0.848, x:20.6},
+    {name:'UC 152×152×37', h:161,  b:154,  I:2210,  A:47.1,  tw:8.0, tf:11.5, kg_m:37,  ry:3.87, Sx:309,   u:0.848, x:13.7},
+    {name:'UC 203×203×46', h:203,  b:203,  I:4568,  A:58.8,  tw:7.2, tf:11.0, kg_m:46,  ry:5.11, Sx:497,   u:0.848, x:17.7},
+    {name:'UC 203×203×60', h:210,  b:206,  I:6125,  A:76.4,  tw:9.4, tf:14.2, kg_m:60,  ry:5.20, Sx:656,   u:0.848, x:14.1},
+    {name:'UC 254×254×73', h:254,  b:254,  I:11410, A:93.1,  tw:8.6, tf:14.2, kg_m:73,  ry:6.48, Sx:990,   u:0.848, x:17.3},
+    {name:'UC 254×254×89', h:260,  b:256,  I:14270, A:113.8, tw:10.5,tf:17.3, kg_m:89,  ry:6.55, Sx:1220,  u:0.848, x:14.5},
+    {name:'UC 305×305×97', h:308,  b:305,  I:22250, A:123.3, tw:9.9, tf:15.4, kg_m:97,  ry:7.69, Sx:1590,  u:0.848, x:18.5},
+    {name:'UC 305×305×118',h:314,  b:307,  I:27700, A:150.2, tw:11.9,tf:18.7, kg_m:118, ry:7.77, Sx:1950,  u:0.848, x:15.4},
   ],
   RHS: [
     {name:'RHS 100×50×4',  h:100,  b:50,   I:135,   A:10.9,  kg_m:8.6,  t:4},
@@ -183,7 +188,8 @@ function applyStdSection() {
   const h = s.h/1000, b = s.b/1000;
   const I = s.I * 1e-8, A = s.A * 1e-4;
   const type = (cat==='UB'||cat==='UC') ? 'ibeam' : cat==='CHS' ? 'circ' : 'hollow';
-  stdSectionOverride = { I, A, b, h, type, kg_m: s.kg_m, name: s.name };
+  stdSectionOverride = { I, A, b, h, type, kg_m: s.kg_m, name: s.name,
+    ry: s.ry || null, Sx: s.Sx || null, u: s.u || null, x: s.x || null };
   document.getElementById('stdSecInfo').innerHTML =
     `<span>${s.name}</span><br>I = <span>${s.I} cm⁴</span> &nbsp; A = <span>${s.A} cm²</span><br>` +
     `h = <span>${s.h} mm</span> &nbsp; b = <span>${s.b} mm</span><br>Mass = <span>${s.kg_m} kg/m</span>`;
@@ -590,6 +596,51 @@ function kenyaCheck(p, maxDef, maxStress, maxMom, maxShr) {
       pass: sectionUtil < 0.9, warn: sectionUtil < 1.0,
       val: `${(sectionUtil*100).toFixed(1)}% capacity used`
     },
+    // LTB check — BS 5950-1:2000 cl 4.3 / KS 02-104
+    // Only applies to open sections (UB/UC). RHS/CHS are torsionally stiff — LTB not critical.
+    ...(() => {
+      const so = stdSectionOverride;
+      if (!so || !so.ry || !so.Sx || !so.u || !so.x) return []; // parametric or hollow section
+      if (so.type !== 'ibeam') return []; // CHS/RHS — skip
+
+      // Effective length LE: assume full lateral restraint at supports → LE = L (conservative)
+      const LE   = L;
+      const ry   = so.ry / 100;       // cm → m
+      const Sx   = so.Sx * 1e-6;      // cm³ → m³
+      const py   = fy;                 // design strength (Pa)
+      const lam  = LE / ry;           // slenderness λ = LE/ry
+
+      // Slenderness factor v from BS 5950 Table 19
+      // v ≈ 1 / (1 + 0.05(λ/x)²)^0.25  (conservative closed-form approximation)
+      const lamOverX = lam / so.x;
+      const v    = 1 / Math.pow(1 + 0.05 * lamOverX * lamOverX, 0.25);
+
+      // Equivalent slenderness λLT = u·v·λ·√βw, βw=1.0 for Class 1/2
+      const lamLT = so.u * v * lam;
+
+      // Limiting slenderness λ1 = π√(E/py)
+      const E    = p.E;
+      const lam1 = Math.PI * Math.sqrt(E / py);
+
+      // Perry factor ηLT (Robertson constant αLT = 7.0 for rolled sections, BS 5950 Table 16)
+      const lamLT0 = 0.4 * lam1;
+      const etaLT  = Math.max(0, 7.0 * (lamLT - lamLT0) / 1000);
+
+      // Bending strength pb (Perry-Robertson formula, BS 5950 cl B.2.2)
+      const phiLT  = (py + (etaLT + 1) * py * (lamLT / lam1) ** 2) / 2;
+      const pb     = py / (phiLT / py + Math.sqrt((phiLT / py) ** 2 - (lamLT / lam1) ** 2));
+      const pbCapped = Math.min(pb, py);
+
+      // Buckling resistance moment Mb = pb × Sx
+      const Mb   = pbCapped * Sx;
+      const util = maxMom / Mb;
+
+      return [{
+        name: 'LTB (BS 5950 cl 4.3)',
+        pass: util <= 1.0, warn: util <= 1.1,
+        val:  `Mx=${(maxMom/1000).toFixed(1)}kNm / Mb=${(Mb/1000).toFixed(1)}kNm (λLT=${lamLT.toFixed(0)})`
+      }];
+    })(),
   ];
 
   const allPass = checks.every(c => c.pass);
