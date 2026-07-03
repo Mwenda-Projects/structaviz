@@ -9,8 +9,10 @@ let stdSectionOverride = null;
 let lastParams = null;
 // Multi-span state
 let spanCount = 1;
-let spanLengths = [8, 8, 8];
-let spanLoads   = [50, 50, 50];
+let spanLengths   = [8, 8, 8];
+let spanLoads     = [50, 50, 50];
+let spanLoadTypes = ['udl', 'udl', 'udl']; // 'udl' or 'point' per span
+let spanLoadPos   = [0.5, 0.5, 0.5];       // point load position as fraction of span
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 function setTheme(t) {
@@ -67,6 +69,7 @@ function buildSpanControls() {
   const wrap = document.getElementById('spanControlsWrap');
   wrap.innerHTML = '';
   for (let i = 0; i < spanCount; i++) {
+    const isPoint = spanLoadTypes[i] === 'point';
     wrap.innerHTML += `
       <div style="margin-bottom:14px;">
         <div class="sec-label">Span ${i+1}</div>
@@ -78,16 +81,42 @@ function buildSpanControls() {
           <input type="range" min="1" max="20" value="${spanLengths[i]}"
             oninput="spanLengths[${i}]=parseFloat(this.value);document.getElementById('vSpanL${i}').textContent=this.value;go()">
         </div>
+        <div class="load-grid" style="margin-bottom:8px;">
+          <div class="ltype ${!isPoint?'on':''}" onclick="setSpanLoadType(${i},'udl',this)">UDL</div>
+          <div class="ltype ${isPoint?'on':''}"  onclick="setSpanLoadType(${i},'point',this)">Point</div>
+        </div>
         <div class="ctrl">
           <div class="ctrl-row">
-            <span class="ctrl-name">UDL (kN/m)</span>
+            <span class="ctrl-name" id="spanLoadLabel${i}">${isPoint?'Load (kN)':'UDL (kN/m)'}</span>
             <span class="ctrl-val" id="vSpanW${i}">${spanLoads[i]}</span>
           </div>
           <input type="range" min="1" max="300" value="${spanLoads[i]}"
             oninput="spanLoads[${i}]=parseFloat(this.value);document.getElementById('vSpanW${i}').textContent=this.value;go()">
         </div>
+        <div id="spanPosWrap${i}" style="display:${isPoint?'':'none'};">
+          <div class="ctrl">
+            <div class="ctrl-row">
+              <span class="ctrl-name">Load position</span>
+              <span class="ctrl-val" id="vSpanPos${i}">${spanLoadPos[i].toFixed(2)}L</span>
+            </div>
+            <input type="range" min="5" max="95" value="${Math.round(spanLoadPos[i]*100)}"
+              oninput="spanLoadPos[${i}]=this.value/100;document.getElementById('vSpanPos${i}').textContent=(this.value/100).toFixed(2)+'L';go()">
+          </div>
+        </div>
       </div>`;
   }
+}
+
+function setSpanLoadType(i, type, el) {
+  spanLoadTypes[i] = type;
+  // Update toggle UI
+  const grid = el.parentElement;
+  grid.querySelectorAll('.ltype').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  // Update label and show/hide position
+  document.getElementById('spanLoadLabel'+i).textContent = type==='point' ? 'Load (kN)' : 'UDL (kN/m)';
+  document.getElementById('spanPosWrap'+i).style.display = type==='point' ? '' : 'none';
+  go();
 }
 
 // ─── SECTION DEFINITIONS ─────────────────────────────────────────────────────
@@ -779,44 +808,43 @@ function updateCost() {
 }
 
 // ─── MULTI-SPAN: THREE-MOMENT EQUATION SOLVER ────────────────────────────────
-// Solves a continuous beam over 2 or 3 equal-section spans with UDL per span.
-// Boundary conditions: M0 = 0 (pin left), Mn = 0 (pin right).
-// Returns array of support moments [M0, M1, ..., Mn] in N·m.
-function solveThreeMoment(spans, loads, EI) {
-  const n = spans.length; // number of spans
-  // For a propped-continuous beam, interior support moments are unknowns.
-  // Three-moment equation for interior support i (between spans i-1 and i):
-  //   L[i-1]*M[i-1] + 2*(L[i-1]+L[i])*M[i] + L[i]*M[i+1] = -6*EI*(θ[i-1]+θ[i])
-  // For UDL w on span L: free-span fixed-end term = w*L^3/4
-  // Simplified (constant EI): L[i-1]*M[i-1] + 2*(L[i-1]+L[i])*M[i] + L[i]*M[i+1]
-  //   = -(w[i-1]*L[i-1]^3 + w[i]*L[i]^3) / 4
-  // Boundary: M[0] = 0, M[n] = 0
+// Handles UDL and point load per span.
+// Three-moment equation fixed-end term:
+//   UDL:        6A/L = w·L³/4
+//   Point load: 6A/L = P·a·(L²-a²) / (2L)  where a = distance from left support
+// Boundary: M[0]=0 (pin left), M[n]=0 (pin right).
+function spanFixedEndTerm(si, L) {
+  if (spanLoadTypes[si] === 'point') {
+    const P = spanLoads[si] * 1000; // kN → N
+    const a = spanLoadPos[si] * L;
+    return P * a * (L*L - a*a) / (2*L);
+  } else {
+    const w = spanLoads[si] * 1000; // kN/m → N/m
+    return w * L*L*L / 4;
+  }
+}
 
-  if (n === 1) return [0, 0]; // single span — handled by existing solver
+function solveThreeMoment(spans, loads, EI) {
+  const n = spans.length;
+  if (n === 1) return [0, 0];
 
   if (n === 2) {
-    // One unknown: M1 (interior support)
-    const L0 = spans[0], L1 = spans[1];
-    const w0 = loads[0], w1 = loads[1];
-    const rhs = -(w0*L0*L0*L0 + w1*L1*L1*L1) / 4;
-    const M1 = rhs / (2*(L0+L1));
+    const L0=spans[0], L1=spans[1];
+    const f0=spanFixedEndTerm(0,L0), f1=spanFixedEndTerm(1,L1);
+    const rhs = -(f0 + f1);
+    const M1  = rhs / (2*(L0+L1));
     return [0, M1, 0];
   }
 
   if (n === 3) {
-    // Two unknowns: M1, M2
-    // Equation for support 1: L0*M0 + 2*(L0+L1)*M1 + L1*M2 = -(w0*L0^3+w1*L1^3)/4
-    // Equation for support 2: L1*M1 + 2*(L1+L2)*M2 + L2*M3 = -(w1*L1^3+w2*L2^3)/4
-    // With M0=0, M3=0:
     const L0=spans[0], L1=spans[1], L2=spans[2];
-    const w0=loads[0], w1=loads[1], w2=loads[2];
-    const a11 = 2*(L0+L1), a12 = L1;
-    const a21 = L1,         a22 = 2*(L1+L2);
-    const b1  = -(w0*L0*L0*L0 + w1*L1*L1*L1) / 4;
-    const b2  = -(w1*L1*L1*L1 + w2*L2*L2*L2) / 4;
-    const det = a11*a22 - a12*a21;
-    const M1  = (b1*a22 - b2*a12) / det;
-    const M2  = (a11*b2 - a21*b1) / det;
+    const f0=spanFixedEndTerm(0,L0), f1=spanFixedEndTerm(1,L1), f2=spanFixedEndTerm(2,L2);
+    const a11=2*(L0+L1), a12=L1;
+    const a21=L1,         a22=2*(L1+L2);
+    const b1=-(f0+f1), b2=-(f1+f2);
+    const det=a11*a22-a12*a21;
+    const M1=(b1*a22-b2*a12)/det;
+    const M2=(a11*b2-a21*b1)/det;
     return [0, M1, M2, 0];
   }
 }
@@ -836,35 +864,54 @@ function solveMultiSpan(p) {
   const supportXs = [0];
 
   spans.forEach((L, si) => {
-    const w  = loads[si];
-    const ML = Ms[si];     // moment at left support of this span
-    const MR = Ms[si+1];   // moment at right support of this span
-    // Reactions from equilibrium:
-    // RL = w*L/2 + (ML - MR)/L
-    // RR = w*L/2 - (ML - MR)/L   (but RR not needed explicitly)
-    const RL = w*L/2 + (ML - MR)/L;
+    const isPoint = spanLoadTypes[si] === 'point';
+    const ML = Ms[si], MR = Ms[si+1];
+
+    let RL;
+    if (isPoint) {
+      const P = spanLoads[si] * 1000;
+      const a = spanLoadPos[si] * L;
+      const b = L - a;
+      // Reactions from three-moment solution + point load equilibrium
+      RL = (P*b/L) + (ML - MR)/L;
+    } else {
+      const w = loads[si];
+      RL = w*L/2 + (ML - MR)/L;
+    }
 
     for (let i = 0; i <= N_PER; i++) {
       const x  = L * i / N_PER;
       const xG = xOffset + x;
       xs.push(xG);
 
-      // Bending moment: M(x) = ML + RL*x - w*x^2/2
-      const m = ML + RL*x - w*x*x/2;
+      let m, v, d;
+      if (isPoint) {
+        const P = spanLoads[si] * 1000;
+        const a = spanLoadPos[si] * L;
+        // BMD: M(x) = ML + RL*x - P*(x-a) for x>a
+        m = ML + RL*x - (x > a ? P*(x-a) : 0);
+        // SFD: V(x) = RL for x<a, RL-P for x>a
+        v = x < a ? RL : RL - P;
+        // Deflection by double integration:
+        // For x ≤ a: y = (1/EI)[ML*x²/2 + RL*x³/6 + C1*x]
+        // For x > a: y = (1/EI)[ML*x²/2 + RL*x³/6 - P*(x-a)³/6 + C1*x]
+        // BC y(L)=0 gives C1:
+        const C1 = -(ML*L/2 + RL*L*L/6 - P*(L-a)*(L-a)*(L-a)/6) / L * L
+                   / L * 1; // simplify:
+        const C1clean = -(ML*L/2 + RL*L*L/6 - P*(L-a)**3/6);
+        d = (ML*x*x/2 + RL*x*x*x/6 - (x > a ? P*(x-a)**3/6 : 0) + C1clean*x) / EI;
+        m = ML + RL*x - (x > a ? P*(x-a) : 0);
+        v = x < a ? RL : RL - P;
+      } else {
+        const w = loads[si];
+        m = ML + RL*x - w*x*x/2;
+        v = RL - w*x;
+        const C1 = -(ML*L/2 + RL*L*L/6 - w*L*L*L/24);
+        d = (ML*x*x/2 + RL*x*x*x/6 - w*x*x*x*x/24 + C1*x) / EI;
+      }
+
       moms.push(m);
-
-      // Shear: V(x) = RL - w*x
-      const v = RL - w*x;
       shrs.push(v);
-
-      // Deflection using double integration with BCs y(0)=0, y(L)=0
-      // y(x) = (1/EI)[ ML*x^2/2 + RL*x^3/6 - w*x^4/24 + C1*x ]
-      // where C1 = (MR*L/2 - ML*L/2 - RL*L^2/6 + w*L^3/24) * (1/L) * EI ... simplified:
-      // Apply y(L)=0: C1 = -(ML*L/2 + RL*L^2/6 - w*L^3/24) / L * ... let's derive cleanly
-      // y(L)=0 → ML*L^2/2 + RL*L^3/6 - w*L^4/24 + C1*L = 0
-      // C1 = -(ML*L/2 + RL*L^2/6 - w*L^3/24)
-      const C1 = -(ML*L/2 + RL*L*L/6 - w*L*L*L/24);
-      const d = (ML*x*x/2 + RL*x*x*x/6 - w*x*x*x*x/24 + C1*x) / EI;
       defs.push(d);
     }
     xOffset += L;
@@ -920,18 +967,26 @@ function draw2dMultiSpan(result, p) {
   }
   supportXs.forEach(sx => pin(xToCanvas(sx), beamY));
 
-  // UDL arrows per span
+  // Load arrows per span — UDL or point load
   ctx.strokeStyle='#f97316'; ctx.fillStyle='#f97316'; ctx.lineWidth=1.2;
   spanLengths.slice(0,spanCount).forEach((L,si) => {
     const x0 = supportXs[si], x1 = supportXs[si+1];
-    const steps = 6;
-    for(let k=0;k<=steps;k++){
-      const ax = xToCanvas(x0 + (x1-x0)*k/steps);
-      ctx.beginPath();ctx.moveTo(ax,beamY-20);ctx.lineTo(ax,beamY-4);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(ax-3,beamY-9);ctx.lineTo(ax,beamY);ctx.lineTo(ax+3,beamY-9);ctx.fill();
+    if (spanLoadTypes[si] === 'point') {
+      const ax = xToCanvas(x0 + spanLoadPos[si]*(x1-x0));
+      ctx.beginPath(); ctx.moveTo(ax,beamY-32); ctx.lineTo(ax,beamY-4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax-4,beamY-11); ctx.lineTo(ax,beamY); ctx.lineTo(ax+4,beamY-11); ctx.fill();
+      ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
+      ctx.fillText(spanLoads[si]+'kN', ax, beamY-35);
+    } else {
+      const steps = 6;
+      for(let k=0;k<=steps;k++){
+        const ax = xToCanvas(x0 + (x1-x0)*k/steps);
+        ctx.beginPath();ctx.moveTo(ax,beamY-20);ctx.lineTo(ax,beamY-4);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(ax-3,beamY-9);ctx.lineTo(ax,beamY);ctx.lineTo(ax+3,beamY-9);ctx.fill();
+      }
+      ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
+      ctx.fillText(spanLoads[si]+'kN/m', xToCanvas((x0+x1)/2), beamY-24);
     }
-    ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
-    ctx.fillText(spanLoads[si]+'kN/m', xToCanvas((x0+x1)/2), beamY-24);
   });
   ctx.textAlign='left';
 
@@ -1558,140 +1613,235 @@ function scrollAI(){const msgs=document.getElementById('aiMessages');msgs.scroll
 function askChip(q){document.getElementById('aiInput').value=q;sendAI();}
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
-function exportReport(){
+async function exportReport(){
   const btn=document.getElementById('exportBtn');
-  btn.disabled=true; btn.textContent='Preparing…';
+  btn.disabled=true; btn.textContent='Building PDF…';
 
-  // FIX: Always redraw the 2D diagram to canvas before capturing,
-  // regardless of which tab is currently active.
-  const p=lastParams||getParams();
-  const N=200, xs=Array.from({length:N+1},(_,i)=>p.L*i/N);
-  const defs=xs.map(x=>defAt(x,p));
-  const moms=xs.map(x=>momAt(x,p));
-  const shrs=xs.map(x=>shearAt(x,p));
-  const maxShr=Math.max(...shrs.map(Math.abs));
-  const Vpl=shearCapacity(p.sec,p.fy);
-  const deflRatio=beam==='cantilever'?180:360;
-  const allowDef=p.L/deflRatio;
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+    const W = 210, H = 297;
+    const ML = 18, MR = 18, MT = 20;
+    let y = MT;
 
-  // Force 2D canvas to render (even if user is on a different tab)
-  const c2d=document.getElementById('c2d');
-  const prevDisplay=document.getElementById('view2d').style.display;
-  document.getElementById('view2d').style.display='';
-  draw2d(xs,defs,moms,shrs,p,allowDef);
-  const imgData=c2d.toDataURL('image/png');
-  document.getElementById('view2d').style.display=prevDisplay;
+    const p = lastParams || getParams();
+    const N = 200, xs = Array.from({length:N+1},(_,i)=>p.L*i/N);
+    const defs = xs.map(x=>defAt(x,p));
+    const moms = xs.map(x=>momAt(x,p));
+    const shrs = xs.map(x=>shearAt(x,p));
+    const maxShr  = Math.max(...shrs.map(Math.abs));
+    const Vpl     = shearCapacity(p.sec, p.fy);
+    const deflRatio = beam==='cantilever'?180:360;
+    const allowDef  = p.L/deflRatio;
 
-  const matEl=document.getElementById('sMat');
-  const matStr=matEl.options[matEl.selectedIndex].text;
-  const beamNames={cantilever:'Cantilever',simply:'Simply Supported',fixed:'Fixed–Fixed'};
-  const sectNames={rect:'Rectangular',ibeam:'I-Beam',circ:'Circular',hollow:'Hollow Box'};
-  const loadNames={point:'Point load',dist:'UDL',tri:'Triangular load'};
-  const secName=stdSectionOverride?(stdSectionOverride.name||'Standard'):sectNames[sect];
-  const compliant=document.getElementById('stampText').textContent;
-  const raw=parseFloat(document.getElementById('pricePerKg').value);
-  const ppkg=(!isNaN(raw)&&raw>0)?raw:120;
-  const mass=(p.sec.A*p.L*p.density).toFixed(1);
-  const total=(p.sec.A*p.L*p.density*ppkg).toLocaleString('en-KE',{maximumFractionDigits:0});
-  const posText=load==='point'?' at '+(getLoadPos()*100).toFixed(0)+'% of span':'';
+    const matEl   = document.getElementById('sMat');
+    const matStr  = matEl.options[matEl.selectedIndex].text;
+    const beamNames = {cantilever:'Cantilever',simply:'Simply Supported',fixed:'Fixed–Fixed'};
+    const loadNames = {point:'Point load',dist:'UDL',tri:'Triangular load'};
+    const sectNames = {rect:'Rectangular',ibeam:'I-Beam',circ:'Circular',hollow:'Hollow Box'};
+    const secName   = stdSectionOverride?(stdSectionOverride.name||'Standard'):sectNames[sect];
+    const compliant = document.getElementById('stampText').textContent;
+    const isCompliant = compliant.includes('COMPLIANT') && !compliant.includes('NON');
+    const raw  = parseFloat(document.getElementById('pricePerKg').value);
+    const ppkg = (!isNaN(raw)&&raw>0)?raw:120;
+    const mass = (p.sec.A*p.L*p.density).toFixed(1);
+    const total = (p.sec.A*p.L*p.density*ppkg).toLocaleString('en-KE',{maximumFractionDigits:0});
+    const posText = load==='point'?' at '+(getLoadPos()*100).toFixed(0)+'% of span':'';
 
-  // Build compliance HTML with neutral inline styles
-  let checksHTML='';
-  document.getElementById('codeResults').querySelectorAll('.code-item').forEach(item=>{
-    const isPass=item.classList.contains('pass'),isWarn=item.classList.contains('warn');
-    const bg=isPass?'#d1fae5':isWarn?'#fef3c7':'#fee2e2';
-    const badgeCol=isPass?'#065f46':isWarn?'#92400e':'#991b1b';
-    const name=item.querySelector('.code-name')?.textContent||'';
-    const val=item.querySelector('.code-val')?.textContent||'';
-    const badge=item.querySelector('.code-badge')?.textContent||'';
-    checksHTML+=`<div style="display:flex;justify-content:space-between;padding:8px 12px;border-radius:6px;margin-bottom:5px;background:${bg};font-size:12px;">
-      <div><strong>${name}</strong><br><span style="color:#64748b;">${val}</span></div>
-      <span style="font-family:monospace;font-weight:bold;color:${badgeCol};">${badge}</span></div>`;
-  });
+    const contentW = W - ML - MR;
 
-  const reportHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <style>
-    body{font-family:Outfit,Arial,sans-serif;padding:48px;color:#1e293b;max-width:800px;margin:0 auto;}
-    h1{font-size:26px;color:#0f172a;margin-bottom:4px;}
-    .sub{color:#64748b;font-size:12px;margin-bottom:28px;font-family:monospace;}
-    .stamp{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:6px;font-size:12px;font-family:monospace;margin-bottom:24px;font-weight:bold;}
-    .stamp.ok{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
-    .stamp.fail{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
-    h2{font-size:15px;color:#334155;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;}
-    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;}
-    th{background:#f8fafc;padding:8px 12px;text-align:left;color:#475569;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:1px;}
-    td{padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#334155;}
-    img{width:100%;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;}
-    .footer{margin-top:40px;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:14px;}
-  </style></head><body>
-  <h1>StructaViz — Structural Analysis Report</h1>
-  <div class="sub">Generated ${new Date().toLocaleString()} · StructaViz Kenya Edition v3.1 · KS 02-104 · BS 5950 · Eurocode 3</div>
-  <div class="stamp ${(compliant.includes('COMPLIANT')&&!compliant.includes('NON'))?'ok':'fail'}">
-    ${(compliant.includes('COMPLIANT')&&!compliant.includes('NON'))?'✓':'✗'} ${compliant}
-  </div>
-  <h2>Input Parameters</h2>
-  <table>
-    <tr><th>Parameter</th><th>Value</th></tr>
-    <tr><td>Beam type</td><td>${beamNames[beam]}</td></tr>
-    <tr><td>Cross section</td><td>${secName}</td></tr>
-    <tr><td>Load type</td><td>${loadNames[load]}${posText}</td></tr>
-    <tr><td>Load magnitude</td><td>${document.getElementById('sLoad').value} kN${load!=='point'?'/m':''}</td></tr>
-    <tr><td>Span</td><td>${document.getElementById('sLen').value} m</td></tr>
-    <tr><td>Material</td><td>${matStr}</td></tr>
-    <tr><td>Self-weight included</td><td>${document.getElementById('selfWeight').checked?'Yes':'No'}</td></tr>
-  </table>
-  <h2>Analysis Results</h2>
-  <table>
-    <tr><th>Result</th><th>Value</th><th>Limit (KS 02-104)</th></tr>
-    <tr><td>Max deflection</td><td>${document.getElementById('mDef').textContent}</td><td>${document.getElementById('mAllowDef').textContent} (L/${deflRatio})</td></tr>
-    <tr><td>Max bending moment</td><td>${document.getElementById('mMom').textContent}</td><td>—</td></tr>
-    <tr><td>Max bending stress</td><td>${document.getElementById('mStress').textContent}</td><td>${(p.fy/1e6).toFixed(0)} MPa (fy)</td></tr>
-    <tr><td>Max shear force</td><td>${document.getElementById('mShear').textContent}</td><td>${(Vpl/1000).toFixed(1)} kN (Vpl)</td></tr>
-    <tr><td>Safety factor</td><td>${document.getElementById('mSF').textContent}</td><td>≥ 1.67</td></tr>
-    ${(()=>{const r=getReactions(p);
-      if(beam==='cantilever') return `<tr><td>Support reaction</td><td>${(r.RL/1000).toFixed(2)} kN</td><td>—</td></tr><tr><td>Fixed-end moment</td><td>${(r.MA/1000).toFixed(2)} kN·m</td><td>—</td></tr>`;
-      if(beam==='simply') return `<tr><td>Left reaction (RL)</td><td>${(r.RL/1000).toFixed(2)} kN</td><td>—</td></tr><tr><td>Right reaction (RR)</td><td>${(r.RR/1000).toFixed(2)} kN</td><td>—</td></tr>`;
-      return `<tr><td>Left reaction (RL)</td><td>${(r.RL/1000).toFixed(2)} kN</td><td>—</td></tr><tr><td>Right reaction (RR)</td><td>${(r.RR/1000).toFixed(2)} kN</td><td>—</td></tr><tr><td>Fixed-end moment MA</td><td>${(r.MA/1000).toFixed(2)} kN·m</td><td>—</td></tr><tr><td>Fixed-end moment MB</td><td>${(r.MB/1000).toFixed(2)} kN·m</td><td>—</td></tr>`;
-    })()}
-  </table>
-  <h2>KS 02-104 Compliance Checks</h2>
-  ${checksHTML}
-  <h2>Cost Estimate (KES)</h2>
-  <table>
-    <tr><th>Item</th><th>Value</th></tr>
-    <tr><td>Volume</td><td>${(p.sec.A*p.L).toFixed(4)} m³</td></tr>
-    <tr><td>Mass</td><td>${mass} kg</td></tr>
-    <tr><td>Price per kg</td><td>KES ${ppkg}</td></tr>
-    <tr><td><strong>Estimated material cost</strong></td><td><strong>KES ${total}</strong></td></tr>
-  </table>
-  <h2>Analysis Diagram</h2>
-  <img src="${imgData}"/>
-  <div class="footer">
-    StructaViz v3.1 · Kenya Edition · References: KS 02-104, BS 5950, Eurocode 3<br>
-    This report is for educational and preliminary design purposes only. All designs must be verified by a registered structural engineer.
-  </div>
-  </body></html>`;
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function checkPage(needed=10) {
+      if (y + needed > H - 16) {
+        doc.addPage();
+        y = MT;
+        drawPageFooter();
+      }
+    }
 
-  // Try window.open first (desktop); fall back to Blob download (mobile/popup-blocked)
-  const win = window.open('', '_blank');
-  if (win && win.document) {
-    win.document.write(reportHTML);
-    win.document.close();
-    setTimeout(() => { win.print(); btn.disabled=false; btn.textContent='⬇ Export PDF Report'; }, 800);
-  } else {
-    // Blob fallback — downloads an HTML file the user can open and print
-    const blob = new Blob([reportHTML], { type: 'text/html' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `StructaViz_Report_${new Date().toISOString().slice(0,10)}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    btn.disabled=false;
-    btn.textContent='⬇ Export PDF Report';
+    function drawPageFooter() {
+      doc.setFontSize(7.5);
+      doc.setTextColor(148,163,184);
+      doc.text('StructaViz v3.1 · Kenya Edition · KS 02-104 · BS 5950 · Eurocode 3  |  For preliminary design only — verify with a registered structural engineer.', ML, H-8);
+      doc.setTextColor(30,41,59);
+    }
+
+    function sectionTitle(title) {
+      checkPage(14);
+      y += 6;
+      doc.setFillColor(248,250,252);
+      doc.rect(ML, y-5, contentW, 8, 'F');
+      doc.setDrawColor(226,232,240);
+      doc.rect(ML, y-5, contentW, 8, 'S');
+      doc.setFontSize(9);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(71,85,105);
+      doc.text(title.toUpperCase(), ML+3, y+0.5);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(30,41,59);
+      y += 8;
+    }
+
+    function tableRow(cols, widths, isHeader=false, rowBg=null) {
+      checkPage(8);
+      const rowH = 7;
+      if (rowBg) { doc.setFillColor(...rowBg); doc.rect(ML, y, contentW, rowH, 'F'); }
+      doc.setFontSize(isHeader?8:9);
+      doc.setFont('helvetica', isHeader?'bold':'normal');
+      doc.setTextColor(isHeader?71:51, isHeader?85:65, isHeader?105:79);
+      let x = ML + 2;
+      cols.forEach((col, i) => {
+        doc.text(String(col), x, y+4.8, { maxWidth: widths[i]-3 });
+        x += widths[i];
+      });
+      doc.setDrawColor(241,245,249);
+      doc.line(ML, y+rowH, ML+contentW, y+rowH);
+      y += rowH;
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(30,41,59);
+    }
+
+    // ── Header ───────────────────────────────────────────────────────────────
+    // Green triangle logo
+    doc.setFillColor(0,200,150);
+    doc.triangle(ML, y+8, ML+5, y, ML+10, y+8, 'F');
+    doc.setFontSize(18);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(15,23,42);
+    doc.text('STRUCTAVIZ', ML+14, y+7);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(100,116,139);
+    doc.text('Structural Analysis Report  ·  Kenya Edition v3.1', ML+14, y+13);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, ML+14, y+18);
+    y += 26;
+
+    // Compliance stamp
+    const stampCol = isCompliant ? [209,250,229] : [254,226,226];
+    const stampTxt = isCompliant ? [6,95,70]     : [153,27,27];
+    doc.setFillColor(...stampCol);
+    doc.roundedRect(ML, y, contentW, 9, 2, 2, 'F');
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...stampTxt);
+    const stampLabel = (isCompliant?'✓ ':'✗ ') + compliant;
+    doc.text(stampLabel, ML+4, y+6);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(30,41,59);
+    y += 14;
+
+    // ── Input Parameters ──────────────────────────────────────────────────────
+    sectionTitle('Input Parameters');
+    const colW2 = [80, contentW-80];
+    tableRow(['Parameter','Value'], colW2, true, [248,250,252]);
+    const rows = [
+      ['Beam type', beamNames[beam]||beam],
+      ['Cross section', secName],
+      ['Load type', (loadNames[load]||load)+posText],
+      ['Load magnitude', document.getElementById('sLoad').value+(load!=='point'?' kN/m':' kN')],
+      ['Span', document.getElementById('sLen').value+' m'],
+      ['Material', matStr],
+      ['Self-weight', document.getElementById('selfWeight').checked?'Included':'Excluded'],
+    ];
+    rows.forEach((r,i) => tableRow(r, colW2, false, i%2===0?null:[248,250,252]));
+    y += 4;
+
+    // ── Analysis Results ──────────────────────────────────────────────────────
+    sectionTitle('Analysis Results');
+    const colW3 = [80, 55, contentW-135];
+    tableRow(['Result','Value','Limit (KS 02-104)'], colW3, true, [248,250,252]);
+    const rxn = getReactions(p);
+    const resultRows = [
+      ['Max deflection', document.getElementById('mDef').textContent, `${document.getElementById('mAllowDef').textContent} (L/${deflRatio})`],
+      ['Max bending moment', document.getElementById('mMom').textContent, '—'],
+      ['Max bending stress', document.getElementById('mStress').textContent, `${(p.fy/1e6).toFixed(0)} MPa (fy)`],
+      ['Max shear force', document.getElementById('mShear').textContent, `${(Vpl/1000).toFixed(1)} kN (Vpl)`],
+      ['Safety factor', document.getElementById('mSF').textContent, '≥ 1.67'],
+    ];
+    if (beam==='cantilever') {
+      resultRows.push(['Support reaction (R)', (rxn.RL/1000).toFixed(2)+' kN', '—']);
+      resultRows.push(['Fixed-end moment (MA)', (rxn.MA/1000).toFixed(2)+' kN·m', '—']);
+    } else {
+      resultRows.push(['Left reaction (RL)', (rxn.RL/1000).toFixed(2)+' kN', '—']);
+      resultRows.push(['Right reaction (RR)', (rxn.RR/1000).toFixed(2)+' kN', '—']);
+      if (beam==='fixed') {
+        resultRows.push(['Fixed-end moment MA', (rxn.MA/1000).toFixed(2)+' kN·m', '—']);
+        resultRows.push(['Fixed-end moment MB', (rxn.MB/1000).toFixed(2)+' kN·m', '—']);
+      }
+    }
+    resultRows.forEach((r,i) => tableRow(r, colW3, false, i%2===0?null:[248,250,252]));
+    y += 4;
+
+    // ── KS 02-104 Compliance ──────────────────────────────────────────────────
+    sectionTitle('KS 02-104 Compliance Checks');
+    document.getElementById('codeResults').querySelectorAll('.code-item').forEach((item,i) => {
+      checkPage(9);
+      const isPass=item.classList.contains('pass'), isWarn=item.classList.contains('warn');
+      const bg   = isPass?[209,250,229]:isWarn?[254,243,199]:[254,226,226];
+      const tCol = isPass?[6,95,70]:isWarn?[120,53,15]:[153,27,27];
+      const name = item.querySelector('.code-name')?.textContent||'';
+      const val  = item.querySelector('.code-val')?.textContent||'';
+      const badge= item.querySelector('.code-badge')?.textContent||'';
+      const rowH = 9;
+      doc.setFillColor(...bg);
+      doc.rect(ML, y, contentW, rowH, 'F');
+      doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(30,41,59);
+      doc.text(name, ML+3, y+4);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,116,139);
+      doc.text(val, ML+3, y+8);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...tCol);
+      doc.text(badge, ML+contentW-16, y+5.5);
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,41,59);
+      doc.setDrawColor(226,232,240);
+      doc.line(ML, y+rowH, ML+contentW, y+rowH);
+      y += rowH+1;
+    });
+    y += 4;
+
+    // ── Cost Estimate ─────────────────────────────────────────────────────────
+    sectionTitle('Cost Estimate (KES)');
+    const colW2b = [80, contentW-80];
+    tableRow(['Item','Value'], colW2b, true, [248,250,252]);
+    [
+      ['Volume', (p.sec.A*p.L).toFixed(4)+' m³'],
+      ['Mass', mass+' kg'],
+      ['Price per kg', 'KES '+ppkg],
+      ['Estimated material cost', 'KES '+total],
+    ].forEach((r,i) => tableRow(r, colW2b, false, i%2===0?null:[248,250,252]));
+    y += 4;
+
+    // ── Analysis Diagram ──────────────────────────────────────────────────────
+    sectionTitle('Analysis Diagram');
+    checkPage(80);
+
+    // Force render 2D canvas
+    const c2d = document.getElementById('c2d');
+    const prevDisplay = document.getElementById('view2d').style.display;
+    document.getElementById('view2d').style.display='';
+    draw2d(xs, defs, moms, shrs, p, allowDef);
+    const imgData = c2d.toDataURL('image/png');
+    document.getElementById('view2d').style.display = prevDisplay;
+
+    const imgW = contentW;
+    const imgH = imgW * (c2d.height / c2d.width);
+    checkPage(imgH+4);
+    doc.addImage(imgData, 'PNG', ML, y, imgW, Math.min(imgH, 80));
+    y += Math.min(imgH, 80) + 4;
+
+    // ── Footer on last page ───────────────────────────────────────────────────
+    drawPageFooter();
+
+    // ── Save ─────────────────────────────────────────────────────────────────
+    const filename = `StructaViz_Report_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+
+  } catch(err) {
+    console.error('PDF export error:', err);
+    alert('PDF export failed: '+err.message);
   }
+
+  btn.disabled=false;
+  btn.textContent='⬇ Export PDF Report';
 }
 
 // ─── SAVED PROJECTS ───────────────────────────────────────────────────────────
@@ -1715,6 +1865,8 @@ function captureState() {
     spanCount,
     spanLengths:  [...spanLengths],
     spanLoads:    [...spanLoads],
+    spanLoadTypes:[...spanLoadTypes],
+    spanLoadPos:  [...spanLoadPos],
     sLoad:        document.getElementById('sLoad').value,
     sLen:         document.getElementById('sLen').value,
     sH:           document.getElementById('sH').value,
@@ -1765,9 +1917,11 @@ function restoreState(s) {
   updateCombinedUDLVisibility();
 
   // Multi-span
-  spanCount = s.spanCount || 1;
-  spanLengths = s.spanLengths || [8,8,8];
-  spanLoads   = s.spanLoads   || [50,50,50];
+  spanCount     = s.spanCount || 1;
+  spanLengths   = s.spanLengths   || [8,8,8];
+  spanLoads     = s.spanLoads     || [50,50,50];
+  spanLoadTypes = s.spanLoadTypes || ['udl','udl','udl'];
+  spanLoadPos   = s.spanLoadPos   || [0.5,0.5,0.5];
   setSpanCount(spanCount, true);
 
   // Section mode
