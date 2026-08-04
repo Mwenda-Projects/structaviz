@@ -14,6 +14,9 @@ let spanLoads     = [50, 50, 50];
 let spanLoadTypes = ['udl', 'udl', 'udl']; // 'udl' or 'point' per span
 let spanLoadPos   = [0.5, 0.5, 0.5];       // point load position as fraction of span
 
+// ─── PRO / MONETIZATION (mock — swap for real subscription check once billing is wired up) ────
+let isPro = localStorage.getItem('structaviz-pro') === 'true';
+
 // ─── THEME ────────────────────────────────────────────────────────────────────
 function setTheme(t) {
   const root = document.documentElement;
@@ -302,9 +305,52 @@ function setView(v, el) {
   const map = {'2d':'view2d','3d':'view3d','section':'viewSec','ai':'viewAI'};
   Object.values(map).forEach(id => { const e=document.getElementById(id); if(e) e.style.display='none'; });
   const target = document.getElementById(map[v]);
-  if (target) target.style.display = v==='ai' ? 'flex' : '';
+  if (target) target.style.display = v==='ai' ? '' : '';
+  if (v === 'ai') {
+    const panel = document.getElementById('aiPanel');
+    const paywall = document.getElementById('aiPaywall');
+    if (isPro) {
+      panel.style.display = 'flex';
+      paywall.style.display = 'none';
+    } else {
+      panel.style.display = 'none';
+      paywall.style.display = 'flex';
+    }
+  }
   if (v !== 'ai') go();
 }
+
+// ─── PRO GATING ────────────────────────────────────────────────────────────────
+function updateProUI() {
+  const lock = document.getElementById('aiTabLock');
+  if (lock) lock.style.display = isPro ? 'none' : '';
+  // If AI tab is currently open, refresh which panel shows
+  if (view === 'ai') {
+    const panel = document.getElementById('aiPanel');
+    const paywall = document.getElementById('aiPaywall');
+    if (panel && paywall) {
+      panel.style.display = isPro ? 'flex' : 'none';
+      paywall.style.display = isPro ? 'none' : 'flex';
+    }
+  }
+}
+
+function upgradeToPro() {
+  // Placeholder until NOWPayments (or chosen billing) is wired up.
+  alert('Pro billing is coming soon! For now this is a preview of the upgrade flow.');
+}
+
+// Dev/testing helper — call setProStatus(true) or setProStatus(false) in the browser console
+// to preview both states before real billing/entitlement checks exist.
+function setProStatus(val) {
+  isPro = !!val;
+  localStorage.setItem('structaviz-pro', String(isPro));
+  updateProUI();
+  console.log('StructaViz Pro status set to:', isPro);
+}
+window.setProStatus = setProStatus;
+
+updateProUI();
 
 // ─── SECTION PROPERTIES ───────────────────────────────────────────────────────
 function getSection(h, ratio) {

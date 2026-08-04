@@ -268,7 +268,7 @@
       <button class="tab on" onclick="setView('2d',this)">2D Analysis</button>
       <button class="tab" onclick="setView('3d',this)">3D View</button>
       <button class="tab" onclick="setView('section',this)">Section View</button>
-      <button class="tab ai-tab" onclick="setView('ai',this)">✦ AI Assistant</button>
+      <button class="tab ai-tab" onclick="setView('ai',this)">✦ AI Assistant <span class="tab-lock" id="aiTabLock" style="display:none;">🔒</span></button>
     </div>
   </div>
 
@@ -299,7 +299,7 @@
   </div>
 
   <div id="viewAI" style="display:none;">
-    <div class="ai-panel">
+    <div class="ai-panel" id="aiPanel">
       <div class="ai-header">
         <div class="ai-dot"></div>
         <span class="ai-title">STRUCTAVIZ AI</span>
@@ -320,6 +320,19 @@
         <input class="ai-input" id="aiInput" type="text" placeholder="Ask about your design…" onkeydown="if(event.key==='Enter')sendAI()">
         <button class="ai-send" id="aiSendBtn" onclick="sendAI()">SEND</button>
       </div>
+    </div>
+
+    <div class="ai-paywall" id="aiPaywall" style="display:none;">
+      <div class="paywall-icon">✦</div>
+      <div class="paywall-title">AI Assistant is a Pro feature</div>
+      <div class="paywall-sub">Upgrade to StructaViz Pro to ask Claude why your beam is failing, get section recommendations, and get instant explanations of every result.</div>
+      <div class="paywall-features">
+        <div class="paywall-feature">Real-time design Q&amp;A, aware of your exact parameters</div>
+        <div class="paywall-feature">KS 02-104 aware section &amp; cost recommendations</div>
+        <div class="paywall-feature">Unlimited chat history per session</div>
+      </div>
+      <button class="paywall-btn" onclick="upgradeToPro()">Upgrade to Pro</button>
+      <div class="paywall-note">Billing coming soon · StructaViz Pro</div>
     </div>
   </div>
 </div>
