@@ -324,6 +324,14 @@ function setView(v, el) {
 function updateProUI() {
   const lock = document.getElementById('aiTabLock');
   if (lock) lock.style.display = isPro ? 'none' : '';
+
+  const optLock = document.getElementById('optimizerLock');
+  const optUnlocked = document.getElementById('optimizerUnlocked');
+  const optLocked = document.getElementById('optimizerLocked');
+  if (optLock) optLock.style.display = isPro ? 'none' : '';
+  if (optUnlocked) optUnlocked.style.display = isPro ? '' : 'none';
+  if (optLocked) optLocked.style.display = isPro ? 'none' : '';
+
   // If AI tab is currently open, refresh which panel shows
   if (view === 'ai') {
     const panel = document.getElementById('aiPanel');
@@ -750,6 +758,7 @@ function kenyaCheck(p, maxDef, maxStress, maxMom, maxShr) {
 // Scans all standard sections and returns the lightest one that passes all
 // KS 02-104 checks for the current beam configuration.
 function optimizeSection() {
+  if (!isPro) { upgradeToPro(); return; }
   const btn = document.getElementById('optimizeBtn');
   const resultEl = document.getElementById('optimizeResult');
   btn.disabled = true;

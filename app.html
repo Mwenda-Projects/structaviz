@@ -207,14 +207,28 @@
   </div>
 
   <!-- Section Optimizer -->
-  <div class="sec">
-    <div class="sec-label">Section Optimizer</div>
-    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5;">
-      Finds the lightest UB/UC/RHS/CHS section that passes all KS 02-104 checks for your current load and span.
+  <div class="sec" id="optimizerSec">
+    <div class="sec-label-row">
+      <div class="sec-label">Section Optimizer</div>
+      <span class="tab-lock" id="optimizerLock" style="display:none;">PRO</span>
     </div>
-    <button class="optimize-btn" id="optimizeBtn" onclick="optimizeSection()">Find Lightest Section</button>
-    <div class="optimize-result" id="optimizeResult" style="display:none;"></div>
+
+    <div id="optimizerUnlocked">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5;">
+        Finds the lightest UB/UC/RHS/CHS section that passes all KS 02-104 checks for your current load and span.
+      </div>
+      <button class="optimize-btn" id="optimizeBtn" onclick="optimizeSection()">Find Lightest Section</button>
+      <div class="optimize-result" id="optimizeResult" style="display:none;"></div>
+    </div>
+
+    <div id="optimizerLocked" class="optimizer-locked" style="display:none;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5;">
+        Automatically scan every UB/UC/RHS/CHS section and pick the lightest one that passes KS 02-104 for your exact load and span.
+      </div>
+      <button class="optimize-btn locked" onclick="upgradeToPro()">Unlock with Pro</button>
+    </div>
   </div>
+
 
   <!-- Cost Estimator -->
   <div class="cost-card">
