@@ -807,7 +807,7 @@ function optimizeSection() {
   const winner = allSections.find(s => testSection(s));
 
   btn.disabled = false;
-  btn.textContent = '⚡ Find Lightest Section';
+  btn.textContent = 'Find Lightest Section';
 
   if (!winner) {
     resultEl.style.display = 'block';
@@ -821,7 +821,7 @@ function optimizeSection() {
   resultEl.innerHTML =
     `<div class="optimize-name">${winner.name}</div>` +
     `<div class="optimize-meta">${winner.kg_m} kg/m · ${winner.cat}</div>` +
-    `<button class="optimize-apply-btn" onclick="applyOptimizedSection('${winner.cat}','${winner.name}')">Apply this section →</button>`;
+    `<button class="optimize-apply-btn" onclick="applyOptimizedSection('${winner.cat}','${winner.name}')">Apply this section</button>`;
 }
 
 function applyOptimizedSection(cat, name) {
@@ -1487,7 +1487,7 @@ function toggleSheet(){
   const sidebar=document.getElementById('sidebar');
   const label=document.getElementById('sheetLabel');
   const isOpen=sidebar.classList.toggle('open');
-  label.textContent=isOpen?'Controls ↓':'Controls ↑';
+  label.textContent='Controls';
 }
 
 // Close sheet when a tab is clicked on mobile
@@ -1496,7 +1496,7 @@ document.querySelectorAll('.tab').forEach(t=>{
     const sidebar=document.getElementById('sidebar');
     if(sidebar.classList.contains('open')){
       sidebar.classList.remove('open');
-      document.getElementById('sheetLabel').textContent='Controls ↑';
+      document.getElementById('sheetLabel').textContent='Controls';
     }
   });
 });
@@ -1566,7 +1566,7 @@ async function sendAI(){
       const errData=await res.json().catch(()=>({}));
       let errMsg=errData.error||'Something went wrong. Please try again.';
       thinkEl.className='ai-msg error';
-      thinkEl.textContent='⚠ '+errMsg;
+      thinkEl.textContent='Error: '+errMsg;
       document.getElementById('aiSendBtn').disabled=false;
       return;
     }
@@ -1580,7 +1580,7 @@ async function sendAI(){
     if(aiHistory.length>12) aiHistory=aiHistory.slice(-12);
   } catch(e){
     thinkEl.className='ai-msg error';
-    thinkEl.textContent='⚠ Network error. Please check your connection and try again.';
+    thinkEl.textContent='Error: Network error. Please check your connection and try again.';
   }
   document.getElementById('aiSendBtn').disabled=false;
   scrollAI();
@@ -1770,7 +1770,7 @@ async function exportReport(){
     doc.setFontSize(9.5);
     doc.setFont('helvetica','bold');
     doc.setTextColor(...stampTxt);
-    const stampLabel = (isCompliant?'✓ ':'✗ ') + compliant;
+    const stampLabel = (isCompliant?'PASS — ':'FAIL — ') + compliant;
     doc.text(stampLabel, ML+4, y+6);
     doc.setFont('helvetica','normal');
     doc.setTextColor(30,41,59);
@@ -1887,7 +1887,7 @@ async function exportReport(){
   }
 
   btn.disabled=false;
-  btn.textContent='⬇ Export PDF Report';
+  btn.textContent='Export PDF Report';
 }
 
 // ─── SAVED PROJECTS ───────────────────────────────────────────────────────────
@@ -2034,7 +2034,7 @@ function renderSaves() {
       </div>
       <div class="save-actions">
         <button class="save-load-btn" onclick="loadProject(${i})">Load</button>
-        <button class="save-del-btn" onclick="deleteProject(${i})">✕</button>
+        <button class="save-del-btn" onclick="deleteProject(${i})">&times;</button>
       </div>
     </div>`;
   }).join('');

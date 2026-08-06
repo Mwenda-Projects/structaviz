@@ -29,7 +29,7 @@
   <!-- Mobile bottom sheet handle -->
   <div class="sheet-handle" id="sheetHandle" onclick="toggleSheet()">
     <div class="sheet-handle-bar"></div>
-    <div class="sheet-handle-label" id="sheetLabel">Controls ↑</div>
+    <div class="sheet-handle-label" id="sheetLabel">Controls</div>
   </div>
 
   <!-- Theme selector — inside sidebar for all screen sizes -->
@@ -212,7 +212,7 @@
     <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5;">
       Finds the lightest UB/UC/RHS/CHS section that passes all KS 02-104 checks for your current load and span.
     </div>
-    <button class="optimize-btn" id="optimizeBtn" onclick="optimizeSection()">⚡ Find Lightest Section</button>
+    <button class="optimize-btn" id="optimizeBtn" onclick="optimizeSection()">Find Lightest Section</button>
     <div class="optimize-result" id="optimizeResult" style="display:none;"></div>
   </div>
 
@@ -238,11 +238,11 @@
   <div class="sec">
     <div class="sec-label">Saved Projects</div>
     <div id="savesList" class="saves-list"></div>
-    <button class="save-btn" onclick="saveProject()" style="margin-top:10px;">💾 Save Current Design</button>
+    <button class="save-btn" onclick="saveProject()" style="margin-top:10px;">Save Current Design</button>
     <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:6px;">Up to 5 projects · Stored in your browser</div>
   </div>
 
-  <button class="export-btn" id="exportBtn" onclick="exportReport()">⬇ Export PDF Report</button>
+  <button class="export-btn" id="exportBtn" onclick="exportReport()">Export PDF Report</button>
 </div>
 
 <!-- MAIN -->
@@ -268,7 +268,7 @@
       <button class="tab on" onclick="setView('2d',this)">2D Analysis</button>
       <button class="tab" onclick="setView('3d',this)">3D View</button>
       <button class="tab" onclick="setView('section',this)">Section View</button>
-      <button class="tab ai-tab" onclick="setView('ai',this)">✦ AI Assistant <span class="tab-lock" id="aiTabLock" style="display:none;">🔒</span></button>
+      <button class="tab ai-tab" onclick="setView('ai',this)">AI Assistant <span class="tab-lock" id="aiTabLock" style="display:none;">PRO</span></button>
     </div>
   </div>
 
@@ -323,7 +323,7 @@
     </div>
 
     <div class="ai-paywall" id="aiPaywall" style="display:none;">
-      <div class="paywall-icon">✦</div>
+      <div class="paywall-icon">AI</div>
       <div class="paywall-title">AI Assistant is a Pro feature</div>
       <div class="paywall-sub">Upgrade to StructaViz Pro to ask Claude why your beam is failing, get section recommendations, and get instant explanations of every result.</div>
       <div class="paywall-features">
