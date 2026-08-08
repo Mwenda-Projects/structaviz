@@ -17,6 +17,9 @@ let spanLoadPos   = [0.5, 0.5, 0.5];       // point load position as fraction of
 // ─── PRO / MONETIZATION (mock — swap for real subscription check once billing is wired up) ────
 let isPro = localStorage.getItem('structaviz-pro') === 'true';
 
+// ─── APP MODE (Beam / Slab) ─────────────────────────────────────────────────
+let appMode = 'beam';
+
 // ─── THEME ────────────────────────────────────────────────────────────────────
 function setTheme(t) {
   const root = document.documentElement;
@@ -2049,8 +2052,232 @@ function renderSaves() {
   }).join('');
 }
 
+// ─── SLAB MODULE — Solid slab, BS 8110 Table 3.13 (simply supported, 4 sides) ─
+// Scope note: only the plain simply-supported case is implemented (verified
+// coefficients). Restrained/continuous-edge cases (BS 8110 Table 3.14) are
+// deferred until that fuller table can be verified against a trusted source.
+
+const SLAB_T313 = {
+  ratio: [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.75, 2.0],
+  asx:   [0.062, 0.074, 0.084, 0.093, 0.099, 0.104, 0.113, 0.118],
+  asy:   [0.062, 0.061, 0.059, 0.055, 0.051, 0.046, 0.037, 0.029]
+};
+
+function slabCoeffs(ratio) {
+  const r = Math.min(Math.max(ratio, 1.0), 2.0);
+  const R = SLAB_T313.ratio;
+  for (let i = 0; i < R.length - 1; i++) {
+    if (r >= R[i] && r <= R[i + 1]) {
+      const t = (r - R[i]) / (R[i + 1] - R[i]);
+      return {
+        asx: SLAB_T313.asx[i] + t * (SLAB_T313.asx[i + 1] - SLAB_T313.asx[i]),
+        asy: SLAB_T313.asy[i] + t * (SLAB_T313.asy[i + 1] - SLAB_T313.asy[i])
+      };
+    }
+  }
+  const n = R.length - 1;
+  return { asx: SLAB_T313.asx[n], asy: SLAB_T313.asy[n] };
+}
+
+function setMode(m) {
+  appMode = m;
+  document.getElementById('modeBeamBtn').classList.toggle('on', m === 'beam');
+  document.getElementById('modeSlabBtn').classList.toggle('on', m === 'slab');
+  document.getElementById('beamSidebar').style.display = m === 'beam' ? '' : 'none';
+  document.getElementById('slabSidebar').style.display  = m === 'slab' ? '' : 'none';
+  document.getElementById('beamMain').style.display = m === 'beam' ? '' : 'none';
+  document.getElementById('slabMain').style.display = m === 'slab' ? '' : 'none';
+  if (m === 'slab') slabGo(); else go();
+}
+
+function getSlabParams() {
+  const LxIn = parseFloat(document.getElementById('sSlabLx').value);
+  const LyIn = parseFloat(document.getElementById('sSlabLy').value);
+  const Lx = Math.min(LxIn, LyIn);   // short span, always ≤ Ly
+  const Ly = Math.max(LxIn, LyIn);
+  const h   = parseFloat(document.getElementById('sSlabH').value); // mm
+  const fcu = parseFloat(document.getElementById('sSlabFcu').value);
+  const fy  = parseFloat(document.getElementById('sSlabFy').value);
+  const qk  = parseFloat(document.getElementById('sSlabQk').value); // kN/m²
+  const selfWeight = document.getElementById('slabSelfWeight').checked ? 24 * (h / 1000) : 0;
+  const n = qk + selfWeight; // total design load, kN/m² (simplified — no separate load factors, consistent with beam module)
+  const ratio = Ly / Lx;
+  const oneWay = ratio > 2.0;
+  return { Lx, Ly, h, fcu, fy, qk, selfWeight, n, ratio, oneWay };
+}
+
+function slabGo() {
+  const p = getSlabParams();
+
+  let Msx, Msy;
+  if (p.oneWay) {
+    // Ly/Lx > 2 — treated as a 1m-wide simply supported strip spanning Lx
+    Msx = (p.n * p.Lx * p.Lx) / 8;
+    Msy = 0;
+  } else {
+    const c = slabCoeffs(p.ratio);
+    Msx = c.asx * p.n * p.Lx * p.Lx;
+    Msy = c.asy * p.n * p.Lx * p.Lx;
+  }
+
+  // Effective depth — assumes 12mm main bars, 25mm cover (typical floor slab)
+  const cover = 25, barDia = 12;
+  const d = p.h - cover - barDia / 2; // mm
+
+  function reqAs(M_kNm) {
+    if (M_kNm <= 0) return 0;
+    const Mns = M_kNm * 1e6;        // N·mm per metre width
+    const z = 0.95 * d;              // mm, simplified lever arm
+    return Mns / (0.87 * p.fy * z);  // mm²/m
+  }
+  const AsX = reqAs(Msx);
+  const AsY = p.oneWay ? 0 : reqAs(Msy);
+  const AsMinPct = p.fy >= 460 ? 0.0013 : 0.0024; // BS 8110 minimum reinforcement ratio
+  const AsMin = AsMinPct * 1000 * p.h;
+
+  // Deflection — BS 8110 basic span/effective-depth ratio (simply supported = 20, unmodified)
+  const basicRatio = 20;
+  const actualLd = (p.Lx * 1000) / d;
+  const defPass = actualLd <= basicRatio;
+
+  // Minimum practical thickness for a solid floor slab
+  const minThk = 125;
+  const thkPass = p.h >= minThk;
+
+  // ── Classification badge ──
+  const badge = document.getElementById('slabTypeBadge');
+  badge.textContent = p.oneWay
+    ? `ONE-WAY · Ly/Lx = ${p.ratio.toFixed(2)} (>2.0)`
+    : `TWO-WAY · Ly/Lx = ${p.ratio.toFixed(2)}`;
+
+  // ── Metrics strip ──
+  document.getElementById('mSlabMsx').textContent = Msx.toFixed(2) + ' kN·m/m';
+  document.getElementById('mSlabMsy').textContent = p.oneWay ? '—' : Msy.toFixed(2) + ' kN·m/m';
+  document.getElementById('mSlabN').textContent   = p.n.toFixed(2) + ' kN/m²';
+  document.getElementById('mSlabLd').textContent  = actualLd.toFixed(1);
+  document.getElementById('mSlabLd').className    = 'metric-val ' + (defPass ? 'ok' : 'fail');
+  document.getElementById('mSlabAllowLd').textContent = basicRatio.toFixed(0);
+  document.getElementById('mSlabRatio').textContent = p.ratio.toFixed(2);
+
+  // ── Compliance panel ──
+  const checks = [
+    {
+      name: 'Deflection (span/depth, basic ratio)',
+      pass: defPass, warn: actualLd <= basicRatio * 1.1,
+      val: `L/d = ${actualLd.toFixed(1)} / ${basicRatio} max`
+    },
+    {
+      name: 'Minimum slab thickness',
+      pass: thkPass, warn: p.h >= minThk - 10,
+      val: `${p.h} mm / ${minThk} mm min`
+    },
+    {
+      name: 'Reinforcement required — short span',
+      pass: true, warn: false,
+      val: `As,req ${AsX.toFixed(0)} mm²/m · As,min ${AsMin.toFixed(0)} mm²/m → provide ${Math.max(AsX, AsMin).toFixed(0)} mm²/m`
+    }
+  ];
+  if (!p.oneWay) {
+    checks.push({
+      name: 'Reinforcement required — long span',
+      pass: true, warn: false,
+      val: `As,req ${AsY.toFixed(0)} mm²/m · As,min ${AsMin.toFixed(0)} mm²/m → provide ${Math.max(AsY, AsMin).toFixed(0)} mm²/m`
+    });
+  }
+
+  const allPass = checks.every(c => c.pass);
+  document.getElementById('slabStampDot').className = 'stamp-dot ' + (allPass ? 'ok' : 'fail');
+  document.getElementById('slabStampText').textContent = allPass ? 'DEFLECTION & THICKNESS OK' : 'CHECK REQUIRED';
+  document.getElementById('slabStamp').className = 'stamp ' + (allPass ? 'ok' : 'fail');
+
+  const sr = document.getElementById('slabResults');
+  sr.innerHTML = '';
+  checks.forEach(c => {
+    const cls  = c.pass ? 'pass' : c.warn ? 'warn' : 'fail';
+    const bcls = c.pass ? 'badge-pass' : c.warn ? 'badge-warn' : 'badge-fail';
+    const lbl  = c.pass ? 'PASS' : c.warn ? 'WARN' : 'FAIL';
+    sr.innerHTML += `<div class="code-item ${cls}">
+      <div><div class="code-name">${c.name}</div><div class="code-val">${c.val}</div></div>
+      <span class="code-badge ${bcls}">${lbl}</span></div>`;
+  });
+
+  drawSlabPlan(p, Msx, Msy);
+}
+
+function drawSlabPlan(p, Msx, Msy) {
+  const c = document.getElementById('cSlab');
+  const dpr = window.devicePixelRatio || 1;
+  const W = c.offsetWidth || 700, H = 340;
+  c.width = W * dpr; c.height = H * dpr;
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const text2   = getCSSVar('--text2')   || '#94a3b8';
+  const accent  = getCSSVar('--accent')  || '#00c896';
+  const accent3 = getCSSVar('--accent3') || '#3b82f6';
+
+  // Panel rectangle — Ly drawn horizontally, Lx (short span) drawn vertically
+  const pad = 60;
+  const availW = W - pad * 2, availH = H - pad * 2;
+  const scale = Math.min(availW / p.Ly, availH / p.Lx);
+  const rw = p.Ly * scale, rh = p.Lx * scale;
+  const rx = (W - rw) / 2, ry = (H - rh) / 2;
+
+  ctx.fillStyle = 'rgba(0,200,150,0.06)';
+  ctx.fillRect(rx, ry, rw, rh);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(rx, ry, rw, rh);
+
+  // Support hatching on all four edges (simply supported)
+  ctx.strokeStyle = text2;
+  ctx.lineWidth = 1;
+  const tick = 6, step = 16;
+  for (let x = rx; x <= rx + rw; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, ry); ctx.lineTo(x - tick, ry - tick); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, ry + rh); ctx.lineTo(x - tick, ry + rh + tick); ctx.stroke();
+  }
+  for (let y = ry; y <= ry + rh; y += step) {
+    ctx.beginPath(); ctx.moveTo(rx, y); ctx.lineTo(rx - tick, y - tick); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rx + rw, y); ctx.lineTo(rx + rw + tick, y - tick); ctx.stroke();
+  }
+
+  // Dimension labels
+  ctx.fillStyle = text2;
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Ly = ${p.Ly.toFixed(2)} m`, rx + rw / 2, ry + rh + 30);
+  ctx.save();
+  ctx.translate(rx - 34, ry + rh / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText(`Lx = ${p.Lx.toFixed(2)} m`, 0, 0);
+  ctx.restore();
+
+  // Classification label
+  ctx.textAlign = 'left';
+  ctx.fillStyle = accent3;
+  ctx.font = 'bold 11px monospace';
+  ctx.fillText(p.oneWay ? 'ONE-WAY SLAB' : 'TWO-WAY SLAB', rx, ry - 16);
+
+  // Moment annotations
+  ctx.textAlign = 'center';
+  ctx.font = '11px monospace';
+  ctx.strokeStyle = accent;
+  ctx.beginPath(); ctx.moveTo(rx + rw * 0.3, ry + 10); ctx.lineTo(rx + rw * 0.3, ry + rh - 10); ctx.stroke();
+  ctx.fillStyle = accent;
+  ctx.fillText(`Msx = ${Msx.toFixed(2)} kN·m/m`, rx + rw * 0.3, ry + rh / 2 - 10);
+
+  if (!p.oneWay) {
+    ctx.strokeStyle = accent3;
+    ctx.beginPath(); ctx.moveTo(rx + 10, ry + rh * 0.72); ctx.lineTo(rx + rw - 10, ry + rh * 0.72); ctx.stroke();
+    ctx.fillStyle = accent3;
+    ctx.fillText(`Msy = ${Msy.toFixed(2)} kN·m/m`, rx + rw / 2, ry + rh * 0.72 + 20);
+  }
+}
+
 // ─── RESIZE ───────────────────────────────────────────────────────────────────
-window.addEventListener('resize',go);
+window.addEventListener('resize', () => { if (appMode === 'slab') slabGo(); else go(); });
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 updateLoadPosVisibility();

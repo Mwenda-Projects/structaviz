@@ -44,6 +44,16 @@
     </div>
   </div>
 
+  <!-- Analysis Mode -->
+  <div class="sec" style="padding:10px 14px;">
+    <div class="mode-toggle">
+      <div class="mode-btn on" id="modeBeamBtn" onclick="setMode('beam')">Beam</div>
+      <div class="mode-btn" id="modeSlabBtn" onclick="setMode('slab')">Slab</div>
+    </div>
+  </div>
+
+  <div id="beamSidebar">
+
   <!-- Span Count -->
   <div class="sec">
     <div class="sec-label">Spans</div>
@@ -257,10 +267,83 @@
   </div>
 
   <button class="export-btn" id="exportBtn" onclick="exportReport()">Export PDF Report</button>
+  </div>
+
+  <div id="slabSidebar" style="display:none;">
+
+    <!-- Slab Geometry -->
+    <div class="sec">
+      <div class="sec-label">Slab Geometry</div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-name">Span 1 — Lx (m)</span><span class="ctrl-val" id="vSlabLx">4</span></div>
+        <input type="range" id="sSlabLx" min="2" max="12" step="0.1" value="4" oninput="sv('vSlabLx',this.value,'');slabGo()">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-name">Span 2 — Ly (m)</span><span class="ctrl-val" id="vSlabLy">6</span></div>
+        <input type="range" id="sSlabLy" min="2" max="12" step="0.1" value="6" oninput="sv('vSlabLy',this.value,'');slabGo()">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-name">Thickness (mm)</span><span class="ctrl-val" id="vSlabH">150</span></div>
+        <input type="range" id="sSlabH" min="100" max="300" step="5" value="150" oninput="sv('vSlabH',this.value,'');slabGo()">
+      </div>
+      <div class="slab-type-badge" id="slabTypeBadge">—</div>
+    </div>
+
+    <!-- Loading -->
+    <div class="sec">
+      <div class="sec-label">Loading</div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-name">Imposed load, qk (kN/m²)</span><span class="ctrl-val" id="vSlabQk">2.0</span></div>
+        <input type="range" id="sSlabQk" min="0.5" max="10" step="0.1" value="2.0" oninput="sv('vSlabQk',this.value,'');slabGo()">
+      </div>
+      <div style="margin-top:10px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2);">
+          <input type="checkbox" id="slabSelfWeight" checked onchange="slabGo()" style="accent-color:var(--accent);width:13px;height:13px;">
+          Include self-weight (24 kN/m³)
+        </label>
+      </div>
+    </div>
+
+    <!-- Material -->
+    <div class="sec">
+      <div class="sec-label">Material</div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-name">Concrete grade, fcu (N/mm²)</span></div>
+        <select id="sSlabFcu" onchange="slabGo()">
+          <option value="25">C25</option>
+          <option value="30">C30</option>
+          <option value="35">C35</option>
+          <option value="40">C40</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-name">Reinforcement, fy (N/mm²)</span></div>
+        <select id="sSlabFy" onchange="slabGo()">
+          <option value="460">High yield (460)</option>
+          <option value="250">Mild steel (250)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="sec">
+      <div class="sec-label">BS 8110 Slab Check</div>
+      <div id="slabStamp" class="stamp ok" style="margin-bottom:10px;">
+        <div class="stamp-dot ok" id="slabStampDot"></div>
+        <span id="slabStampText">DEFLECTION OK</span>
+      </div>
+      <div class="code-results" id="slabResults"></div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:8px;line-height:1.5;">
+        Table 3.13 (simply supported, four sides) · deemed-to-satisfy deflection check assumes As,prov ≈ As,req. Reinforcement detailing not yet included.
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- MAIN -->
 <div class="main">
+  <div id="beamMain">
   <!-- Mobile compliance status bar -->
   <div class="mobile-status-bar" id="mobileStatusBar">
     <div class="msb-dot" id="msbDot"></div>
@@ -347,6 +430,27 @@
       </div>
       <button class="paywall-btn" onclick="upgradeToPro()">Upgrade to Pro</button>
       <div class="paywall-note">Billing coming soon · StructaViz Pro</div>
+    </div>
+  </div>
+  </div>
+
+  <div id="slabMain" style="display:none;">
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Msx (short span)</div><div class="metric-val" id="mSlabMsx">—</div></div>
+      <div class="metric"><div class="metric-label">Msy (long span)</div><div class="metric-val" id="mSlabMsy">—</div></div>
+      <div class="metric"><div class="metric-label">Design load, n</div><div class="metric-val" id="mSlabN">—</div></div>
+      <div class="metric"><div class="metric-label">Actual L/d</div><div class="metric-val" id="mSlabLd">—</div></div>
+      <div class="metric"><div class="metric-label">Allow. L/d</div><div class="metric-val" id="mSlabAllowLd">—</div></div>
+      <div class="metric"><div class="metric-label">Ly / Lx ratio</div><div class="metric-val" id="mSlabRatio">—</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab on">Plan View</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Slab Panel — Plan View</div>
+      <canvas id="cSlab" height="340"></canvas>
     </div>
   </div>
 </div>
