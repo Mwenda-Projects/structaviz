@@ -9,11 +9,12 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:      #080a0f;
-  --bg2:     #0d1018;
-  --bg3:     #121620;
-  --border:  rgba(255,255,255,0.06);
-  --border2: rgba(255,255,255,0.12);
+  --bg:      #07090d;
+  --bg2:     #0c0f16;
+  --bg3:     #10141d;
+  --border:  rgba(150,180,220,0.07);
+  --border2: rgba(150,180,220,0.14);
+  --brand:   #4fa8ff;
   --accent:  #00c896;
   --accent2: #f97316;
   --accent3: #3b82f6;
@@ -61,13 +62,13 @@ nav {
   border-bottom: 1px solid var(--border);
 }
 .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.nav-icon { width: 24px; height: 24px; background: var(--accent); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+.nav-icon { width: 24px; height: 24px; background: var(--brand); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
 .nav-name { font-family: var(--mono); font-size: 13px; letter-spacing: 3px; color: var(--text); }
-.nav-ver  { font-family: var(--mono); font-size: 9px; color: var(--accent); opacity: 0.8; }
+.nav-ver  { font-family: var(--mono); font-size: 9px; color: var(--brand); opacity: 0.8; }
 .nav-cta  {
   padding: 7px 18px;
-  background: var(--accent);
-  color: #000;
+  background: var(--brand);
+  color: #071522;
   border-radius: 6px;
   font-family: var(--mono);
   font-size: 11px;
@@ -95,8 +96,8 @@ nav {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0,200,150,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,200,150,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(79,168,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,168,255,0.035) 1px, transparent 1px);
   background-size: 60px 60px;
   pointer-events: none;
 }
@@ -105,7 +106,7 @@ nav {
   position: absolute;
   width: 700px; height: 700px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,200,150,0.07) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(79,168,255,0.07) 0%, transparent 70%);
   top: 50%; left: 50%;
   transform: translate(-50%, -55%);
   pointer-events: none;
@@ -116,11 +117,11 @@ nav {
   align-items: center;
   gap: 8px;
   padding: 5px 14px;
-  border: 1px solid rgba(0,200,150,0.3);
+  border: 1px solid rgba(79,168,255,0.35);
   border-radius: 20px;
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--accent);
+  color: var(--brand);
   letter-spacing: 2px;
   margin-bottom: 24px;
   opacity: 0;
@@ -129,7 +130,7 @@ nav {
 .badge-dot {
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--brand);
   animation: pulse 2s infinite;
 }
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
@@ -146,7 +147,7 @@ nav {
 }
 .hero h1 span {
   display: block;
-  background: linear-gradient(135deg, var(--accent), #00a878);
+  background: linear-gradient(135deg, var(--brand), #1d6fc4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -174,8 +175,8 @@ nav {
 
 .btn-primary {
   padding: 13px 30px;
-  background: var(--accent);
-  color: #000;
+  background: var(--brand);
+  color: #071522;
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 2px;
@@ -186,9 +187,9 @@ nav {
   transition: all 0.2s;
 }
 .btn-primary:hover {
-  background: #00e0aa;
+  background: #6cb8ff;
   transform: translateY(-1px);
-  box-shadow: 0 8px 30px rgba(0,200,150,0.25);
+  box-shadow: 0 8px 30px rgba(79,168,255,0.25);
 }
 
 .btn-ghost {
@@ -204,7 +205,7 @@ nav {
   border: 1px solid var(--border2);
   transition: all 0.2s;
 }
-.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
 
 /* STATS BAR */
 .stats-bar {
@@ -302,7 +303,7 @@ nav {
   position: absolute;
   width: 500px; height: 500px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,200,150,0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(79,168,255,0.06) 0%, transparent 70%);
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
@@ -347,7 +348,7 @@ footer {
   gap: 16px;
 }
 .footer-brand { display: flex; align-items: center; gap: 8px; }
-.footer-icon  { width: 18px; height: 18px; background: var(--accent); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+.footer-icon  { width: 18px; height: 18px; background: var(--brand); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
 .footer-name  { font-family: var(--mono); font-size: 11px; letter-spacing: 2px; color: var(--text2); }
 .footer-info  { font-size: 11px; color: var(--text3); text-align: center; }
 .footer-links { display: flex; gap: 20px; }
