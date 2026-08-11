@@ -25,6 +25,7 @@
   --mono:    'Space Mono', monospace;
   --display: 'Syne', sans-serif;
   --body:    'Inter', sans-serif;
+  --ease: cubic-bezier(0.16,1,0.3,1);
 }
 
 html { scroll-behavior: smooth; }
@@ -46,6 +47,18 @@ body::before {
   pointer-events: none;
   z-index: 1000;
   opacity: 0.4;
+}
+
+::selection { background: var(--brand); color: #071522; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+
+.btn-primary:active, .btn-ghost:active, .nav-cta:active { transform: scale(0.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
 /* NAV */
