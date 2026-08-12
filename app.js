@@ -2456,6 +2456,7 @@ window.addEventListener('pageshow', forceResync);
 window.addEventListener('load', () => setTimeout(forceResync, 60));
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
+
 updateLoadPosVisibility();
 updatePosLabel();
 updateCombinedUDLVisibility();
