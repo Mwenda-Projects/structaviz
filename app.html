@@ -144,7 +144,7 @@
           <span class="ctrl-name">Load position</span>
           <span class="ctrl-val" id="vPos">0.50L</span>
         </div>
-        <input type="range" id="sPos" min="5" max="95" value="50"
+        <input type="range" id="sPos" autocomplete="off" min="5" max="95" value="50"
                oninput="updatePosLabel();go()">
       </div>
     </div>
@@ -166,7 +166,7 @@
             <span class="ctrl-name">UDL rate (kN/m)</span>
             <span class="ctrl-val" id="vCombinedUDL">10</span>
           </div>
-          <input type="range" id="sCombinedUDL" min="1" max="200" value="10"
+          <input type="range" id="sCombinedUDL" autocomplete="off" min="1" max="200" value="10"
                  oninput="sv('vCombinedUDL',this.value,'');go()">
         </div>
       </div>
@@ -178,25 +178,25 @@
     <div class="sec-label">Parameters</div>
     <div class="ctrl">
       <div class="ctrl-row"><span class="ctrl-name" id="loadLabel">Load (kN)</span><span class="ctrl-val" id="vLoad">50</span></div>
-      <input type="range" id="sLoad" min="5" max="500" value="50" oninput="sv('vLoad',this.value,'');go()">
+      <input type="range" id="sLoad" autocomplete="off" min="5" max="500" value="50" oninput="sv('vLoad',this.value,'');go()">
     </div>
     <div class="ctrl">
       <div class="ctrl-row"><span class="ctrl-name">Span (m)</span><span class="ctrl-val" id="vLen">8</span></div>
-      <input type="range" id="sLen" min="1" max="30" value="8" oninput="sv('vLen',this.value,'');go()">
+      <input type="range" id="sLen" autocomplete="off" min="1" max="30" value="8" oninput="sv('vLen',this.value,'');go()">
     </div>
     <div id="paramHeightWrap">
       <div class="ctrl">
         <div class="ctrl-row"><span class="ctrl-name">Section height (mm)</span><span class="ctrl-val" id="vH">300</span></div>
-        <input type="range" id="sH" min="100" max="900" value="300" oninput="sv('vH',this.value,'');go()">
+        <input type="range" id="sH" autocomplete="off" min="100" max="900" value="300" oninput="sv('vH',this.value,'');go()">
       </div>
       <div class="ctrl">
         <div class="ctrl-row"><span class="ctrl-name">Width ratio</span><span class="ctrl-val" id="vR">0.5</span></div>
-        <input type="range" id="sR" min="2" max="10" value="5" oninput="sv('vR',(this.value/10).toFixed(1),'');go()">
+        <input type="range" id="sR" autocomplete="off" min="2" max="10" value="5" oninput="sv('vR',(this.value/10).toFixed(1),'');go()">
       </div>
     </div>
     <div class="ctrl">
       <div class="ctrl-row"><span class="ctrl-name">Material</span></div>
-      <select id="sMat" onchange="go()">
+      <select id="sMat" autocomplete="off" onchange="go()">
         <option value="200,250,7850">Structural Steel (E=200 GPa, fy=250 MPa)</option>
         <option value="70,270,2700">Aluminium Alloy (E=70 GPa, fy=270 MPa)</option>
         <option value="30,25,2400">Reinforced Concrete (E=30 GPa, fc=25 MPa)</option>
@@ -276,15 +276,15 @@
       <div class="sec-label">Slab Geometry</div>
       <div class="ctrl">
         <div class="ctrl-row"><span class="ctrl-name">Span 1 — Lx (m)</span><span class="ctrl-val" id="vSlabLx">4</span></div>
-        <input type="range" id="sSlabLx" min="2" max="12" step="0.1" value="4" oninput="sv('vSlabLx',this.value,'');slabGo()">
+        <input type="range" id="sSlabLx" autocomplete="off" min="2" max="12" step="0.1" value="4" oninput="sv('vSlabLx',this.value,'');slabGo()">
       </div>
       <div class="ctrl">
         <div class="ctrl-row"><span class="ctrl-name">Span 2 — Ly (m)</span><span class="ctrl-val" id="vSlabLy">6</span></div>
-        <input type="range" id="sSlabLy" min="2" max="12" step="0.1" value="6" oninput="sv('vSlabLy',this.value,'');slabGo()">
+        <input type="range" id="sSlabLy" autocomplete="off" min="2" max="12" step="0.1" value="6" oninput="sv('vSlabLy',this.value,'');slabGo()">
       </div>
       <div class="ctrl">
         <div class="ctrl-row"><span class="ctrl-name">Thickness (mm)</span><span class="ctrl-val" id="vSlabH">150</span></div>
-        <input type="range" id="sSlabH" min="100" max="300" step="5" value="150" oninput="sv('vSlabH',this.value,'');slabGo()">
+        <input type="range" id="sSlabH" autocomplete="off" min="100" max="300" step="5" value="150" oninput="sv('vSlabH',this.value,'');slabGo()">
       </div>
       <div class="slab-type-badge" id="slabTypeBadge">—</div>
     </div>
@@ -294,7 +294,7 @@
       <div class="sec-label">Loading</div>
       <div class="ctrl">
         <div class="ctrl-row"><span class="ctrl-name">Imposed load, qk (kN/m²)</span><span class="ctrl-val" id="vSlabQk">2.0</span></div>
-        <input type="range" id="sSlabQk" min="0.5" max="10" step="0.1" value="2.0" oninput="sv('vSlabQk',this.value,'');slabGo()">
+        <input type="range" id="sSlabQk" autocomplete="off" min="0.5" max="10" step="0.1" value="2.0" oninput="sv('vSlabQk',this.value,'');slabGo()">
       </div>
       <div style="margin-top:10px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2);">

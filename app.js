@@ -40,6 +40,92 @@ function setComplianceState(el, dotEl, key, allPass) {
 // ─── PRO / MONETIZATION (mock — swap for real subscription check once billing is wired up) ────
 let isPro = localStorage.getItem('structaviz-pro') === 'true';
 
+// ─── IN-APP DIALOGS ──────────────────────────────────────────────────────────
+// Replaces native alert()/prompt() so an interruption still looks like part of
+// the product instead of breaking out to an unstyleable OS dialog. Both return
+// a Promise so call sites can just `await` them.
+function _dlgBuild(msg, opts) {
+  const overlay = document.createElement('div');
+  overlay.className = 'dlg-overlay';
+  const box = document.createElement('div');
+  box.className = 'dlg-box';
+  const msgEl = document.createElement('div');
+  msgEl.className = 'dlg-msg';
+  msgEl.textContent = msg;
+  box.appendChild(msgEl);
+  let inputEl = null;
+  if (opts.input) {
+    inputEl = document.createElement('input');
+    inputEl.className = 'dlg-input';
+    inputEl.type = 'text';
+    inputEl.value = opts.defaultValue || '';
+    box.appendChild(inputEl);
+  }
+  const actions = document.createElement('div');
+  actions.className = 'dlg-actions';
+  box.appendChild(actions);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('open'));
+  if (inputEl) setTimeout(() => { inputEl.focus(); inputEl.select(); }, 50);
+  return { overlay, actions, inputEl };
+}
+function _dlgClose(overlay) {
+  overlay.classList.remove('open');
+  setTimeout(() => overlay.remove(), 220);
+}
+function showAlert(msg) {
+  return new Promise(resolve => {
+    const { overlay, actions } = _dlgBuild(msg, {});
+    const ok = document.createElement('button');
+    ok.className = 'dlg-btn primary';
+    ok.textContent = 'OK';
+    const done = () => { _dlgClose(overlay); resolve(); };
+    ok.onclick = done;
+    actions.appendChild(ok);
+    ok.focus();
+    overlay.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === 'Escape') done(); });
+  });
+}
+function showPrompt(msg, defaultValue) {
+  return new Promise(resolve => {
+    const { overlay, actions, inputEl } = _dlgBuild(msg, { input: true, defaultValue });
+    const cancel = document.createElement('button');
+    cancel.className = 'dlg-btn';
+    cancel.textContent = 'Cancel';
+    cancel.onclick = () => { _dlgClose(overlay); resolve(null); };
+    const ok = document.createElement('button');
+    ok.className = 'dlg-btn primary';
+    ok.textContent = 'Save';
+    const submit = () => { const v = inputEl.value; _dlgClose(overlay); resolve(v); };
+    ok.onclick = submit;
+    actions.appendChild(cancel);
+    actions.appendChild(ok);
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') submit();
+      if (e.key === 'Escape') cancel.click();
+    });
+  });
+}
+function showConfirm(msg, confirmLabel) {
+  return new Promise(resolve => {
+    const { overlay, actions } = _dlgBuild(msg, {});
+    const cancel = document.createElement('button');
+    cancel.className = 'dlg-btn';
+    cancel.textContent = 'Cancel';
+    const no = () => { _dlgClose(overlay); resolve(false); };
+    cancel.onclick = no;
+    const ok = document.createElement('button');
+    ok.className = 'dlg-btn primary';
+    ok.textContent = confirmLabel || 'Confirm';
+    const yes = () => { _dlgClose(overlay); resolve(true); };
+    ok.onclick = yes;
+    actions.appendChild(cancel);
+    actions.appendChild(ok);
+    overlay.addEventListener('keydown', e => { if (e.key === 'Escape') no(); if (e.key === 'Enter') yes(); });
+  });
+}
+
 // ─── APP MODE (Beam / Slab) ─────────────────────────────────────────────────
 let appMode = 'beam';
 
@@ -371,7 +457,7 @@ function updateProUI() {
 
 function upgradeToPro() {
   // Placeholder until NOWPayments (or chosen billing) is wired up.
-  alert('Pro billing is coming soon! For now this is a preview of the upgrade flow.');
+  showAlert('Pro billing is coming soon! For now this is a preview of the upgrade flow.');
 }
 
 // Dev/testing helper — call setProStatus(true) or setProStatus(false) in the browser console
@@ -1921,7 +2007,7 @@ async function exportReport(){
 
   } catch(err) {
     console.error('PDF export error:', err);
-    alert('PDF export failed: '+err.message);
+    showAlert('PDF export failed: '+err.message);
   }
 
   btn.disabled=false;
@@ -2026,13 +2112,13 @@ function restoreState(s) {
   go();
 }
 
-function saveProject() {
+async function saveProject() {
   const saves = getSaves();
   if (saves.length >= MAX_SAVES) {
-    alert(`You have ${MAX_SAVES} saves already. Delete one first.`);
+    await showAlert(`You have ${MAX_SAVES} saves already. Delete one first.`);
     return;
   }
-  const name = prompt('Name this project:', 'Beam ' + (saves.length + 1));
+  const name = await showPrompt('Name this project:', 'Beam ' + (saves.length + 1));
   if (!name) return;
   const state  = captureState();
   state.name   = name.trim() || 'Untitled';
@@ -2333,6 +2419,41 @@ function drawSlabPlan(p, Msx, Msy) {
 
 // ─── RESIZE ───────────────────────────────────────────────────────────────────
 window.addEventListener('resize', () => { if (appMode === 'slab') slabGo(); else go(); });
+
+// ─── CONTROL/RESULT DESYNC GUARD ────────────────────────────────────────────
+// Root cause: getParams()/getSection() read slider .value directly from the DOM
+// with no caching, so two go() calls with identical underlying values always
+// produce identical results. If results differ between "just loaded" and
+// "after clicking an already-selected option", the DOM values themselves must
+// have silently changed in between — which is exactly what browsers do:
+// restoring previously-used <input>/<select> values on this URL, but doing so
+// *after* our own initial go() already ran against the HTML's declared
+// defaults, and without firing input/change (so oninput="sv(...)" never runs
+// and the visible labels go stale too, not just the calculation).
+// Fix: on pageshow (fires on every load, and specifically on bfcache restores
+// where our script doesn't re-run at all), resync every label to whatever the
+// controls actually hold right now, then force a fresh calculation.
+function resyncControlLabels() {
+  const val = id => { const e = document.getElementById(id); return e ? e.value : null; };
+  if (val('sH'))           sv('vH', val('sH'), '');
+  if (val('sLen'))         sv('vLen', val('sLen'), '');
+  if (val('sLoad'))        sv('vLoad', val('sLoad'), '');
+  if (val('sR'))           sv('vR', (val('sR') / 10).toFixed(1), '');
+  if (val('sCombinedUDL')) sv('vCombinedUDL', val('sCombinedUDL'), '');
+  if (val('sSlabH'))       sv('vSlabH', val('sSlabH'), '');
+  if (val('sSlabLx'))      sv('vSlabLx', val('sSlabLx'), '');
+  if (val('sSlabLy'))      sv('vSlabLy', val('sSlabLy'), '');
+  if (val('sSlabQk'))      sv('vSlabQk', val('sSlabQk'), '');
+  updatePosLabel();
+}
+function forceResync() {
+  resyncControlLabels();
+  if (appMode === 'slab') slabGo(); else go();
+}
+window.addEventListener('pageshow', forceResync);
+// Defensive second pass shortly after initial load, in case restoration lands
+// slightly later than pageshow on some browsers/extensions.
+window.addEventListener('load', () => setTimeout(forceResync, 60));
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 updateLoadPosVisibility();
