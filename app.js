@@ -2288,7 +2288,7 @@ function drawSlabPlan(p, Msx, Msy) {
 // existing onclick logic. MutationObserver covers rows rendered after load
 // (std-section library, per-span load-type toggles).
 (function enableKeyboardActivation(){
-  const SELECTOR = '.btype, .ltype, .stype, .mode-btn, .sec-mode-btn, .sheet-handle';
+  const SELECTOR = '.btype, .ltype, .stype, .mode-btn, .sec-mode-btn, .sheet-handle, .ai-chip';
   function makeFocusable(el){
     if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0');
     if(!el.hasAttribute('role')) el.setAttribute('role','button');
