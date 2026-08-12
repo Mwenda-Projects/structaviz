@@ -1099,6 +1099,8 @@ function draw2dMultiSpan(result, p) {
   });
 
   // Reaction forces at each support (from span equilibrium)
+  // Y position dynamically clears the limit-line label above (see defLim, line ~1012)
+  const rxnLabelY = Math.max(beamY + 30, beamY + defLim + 16);
   ctx.font='10px Space Mono,monospace'; ctx.fillStyle='rgba(0,200,150,0.9)'; ctx.textAlign='center';
   const spansSlice = spanLengths.slice(0, spanCount);
   const loadsSlice = spanLoads.slice(0, spanCount).map(v => v * 1000);
@@ -1111,10 +1113,10 @@ function draw2dMultiSpan(result, p) {
     // Left support of span gets RL, right support gets RR (accumulate if interior)
     const xL = xToCanvas(supportXs[si]);
     const xR = xToCanvas(supportXs[si + 1]);
-    if (si === 0) ctx.fillText('R=' + (RL / 1000).toFixed(1) + 'kN', xL, beamY + 30);
+    if (si === 0) ctx.fillText('R=' + (RL / 1000).toFixed(1) + 'kN', xL, rxnLabelY);
     // Interior supports: show combined reaction from both adjacent spans
     const combinedR = si === 0 ? RR : RR + (loadsSlice[si - 1] * spansSlice[si - 1] / 2 + (Ms[si - 1] - Ms[si]) / spansSlice[si - 1]);
-    ctx.fillText('R=' + (si === spanCount - 1 ? (RR / 1000).toFixed(1) : (combinedR / 1000).toFixed(1)) + 'kN', xR, beamY + 30);
+    ctx.fillText('R=' + (si === spanCount - 1 ? (RR / 1000).toFixed(1) : (combinedR / 1000).toFixed(1)) + 'kN', xR, rxnLabelY);
   });
 
   // X axis labels
@@ -1319,20 +1321,23 @@ function draw2d(xs, defs, moms, shrs, p, allowDef) {
   ctx.lineTo(PL+bW,shrBase); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle='#f97316'; ctx.fillText('SFD',PL+4,shrBase-5);
 
-  // Reaction forces
+  // Reaction forces — Y position dynamically clears the limit-line label above,
+  // since defLim scales with deflection and can otherwise land under a fixed offset
   const rxn = getReactions(p);
+  const labelY1 = Math.max(beamY + 28, beamY + defLim + 16);
+  const labelY2 = Math.max(beamY + 41, beamY + defLim + 29);
   ctx.font='10px Space Mono,monospace'; ctx.fillStyle='rgba(0,200,150,0.9)'; ctx.textAlign='center';
   if (beam === 'cantilever') {
-    ctx.fillText('R=' + (rxn.RL/1000).toFixed(1) + 'kN', PL, beamY + 28);
+    ctx.fillText('R=' + (rxn.RL/1000).toFixed(1) + 'kN', PL, labelY1);
     if (rxn.MA > 0)
-      ctx.fillText('M=' + (rxn.MA/1000).toFixed(1) + 'kNm', PL, beamY + 41);
+      ctx.fillText('M=' + (rxn.MA/1000).toFixed(1) + 'kNm', PL, labelY2);
   } else if (beam === 'simply') {
-    ctx.fillText('RL=' + (rxn.RL/1000).toFixed(1) + 'kN', PL, beamY + 28);
-    ctx.fillText('RR=' + (rxn.RR/1000).toFixed(1) + 'kN', PL+bW, beamY + 28);
+    ctx.fillText('RL=' + (rxn.RL/1000).toFixed(1) + 'kN', PL, labelY1);
+    ctx.fillText('RR=' + (rxn.RR/1000).toFixed(1) + 'kN', PL+bW, labelY1);
   } else {
-    ctx.fillText('RL=' + (rxn.RL/1000).toFixed(1) + 'kN', PL, beamY + 28);
-    ctx.fillText('RR=' + (rxn.RR/1000).toFixed(1) + 'kN', PL+bW, beamY + 28);
-    ctx.fillText('MA=' + (rxn.MA/1000).toFixed(1) + 'kNm', PL, beamY + 41);
+    ctx.fillText('RL=' + (rxn.RL/1000).toFixed(1) + 'kN', PL, labelY1);
+    ctx.fillText('RR=' + (rxn.RR/1000).toFixed(1) + 'kN', PL+bW, labelY1);
+    ctx.fillText('MA=' + (rxn.MA/1000).toFixed(1) + 'kNm', PL, labelY2);
     ctx.fillText('MB=' + (rxn.MB/1000).toFixed(1) + 'kNm', PL+bW, beamY + 41);
   }
 
@@ -2275,6 +2280,36 @@ function drawSlabPlan(p, Msx, Msy) {
     ctx.fillText(`Msy = ${Msy.toFixed(2)} kN·m/m`, rx + rw / 2, ry + rh * 0.72 + 20);
   }
 }
+
+// ─── ACCESSIBILITY: keyboard activation for div-based controls ────────────────
+// .btype/.ltype/.stype/.mode-btn/.sec-mode-btn/.sheet-handle are <div onclick>,
+// not real buttons, so keyboard-only users can't reach or activate them at all.
+// This makes them focusable and Enter/Space-activatable without touching the
+// existing onclick logic. MutationObserver covers rows rendered after load
+// (std-section library, per-span load-type toggles).
+(function enableKeyboardActivation(){
+  const SELECTOR = '.btype, .ltype, .stype, .mode-btn, .sec-mode-btn, .sheet-handle';
+  function makeFocusable(el){
+    if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0');
+    if(!el.hasAttribute('role')) el.setAttribute('role','button');
+  }
+  document.querySelectorAll(SELECTOR).forEach(makeFocusable);
+  const observer = new MutationObserver(muts=>{
+    muts.forEach(m=>m.addedNodes.forEach(node=>{
+      if(node.nodeType!==1) return;
+      if(node.matches && node.matches(SELECTOR)) makeFocusable(node);
+      if(node.querySelectorAll) node.querySelectorAll(SELECTOR).forEach(makeFocusable);
+    }));
+  });
+  observer.observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('keydown', function(e){
+    if(e.key!=='Enter' && e.key!==' ') return;
+    const el = e.target.closest(SELECTOR);
+    if(!el) return;
+    e.preventDefault();
+    el.click();
+  });
+})();
 
 // ─── RESIZE ───────────────────────────────────────────────────────────────────
 window.addEventListener('resize', () => { if (appMode === 'slab') slabGo(); else go(); });

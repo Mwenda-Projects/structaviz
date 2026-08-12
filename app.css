@@ -354,7 +354,7 @@ canvas{display:block;width:100%;}
 .tab.on:active { transform: scale(0.98); }
 
 /* Focus states — brand blue, consistent across every interactive control */
-button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-visible, .ltype:focus-visible, .stype:focus-visible, .tab:focus-visible {
+button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-visible, .ltype:focus-visible, .stype:focus-visible, .tab:focus-visible, .mode-btn:focus-visible, .sec-mode-btn:focus-visible, .sheet-handle:focus-visible {
   outline:1.5px solid var(--brand);
   outline-offset:2px;
 }
