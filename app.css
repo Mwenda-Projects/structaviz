@@ -288,6 +288,16 @@ canvas{display:block;width:100%;}
 .stamp-dot.ok{background:var(--accent);}
 .stamp-dot.fail{background:var(--red);}
 
+/* Impact moment — fires once, only on an actual pass↔fail transition (see setComplianceState in app.js) */
+@keyframes stampImpact{
+  0%   { transform: rotate(-5deg) scale(1.24); opacity:.55; }
+  55%  { transform: rotate(0.6deg) scale(0.93); opacity:1; }
+  78%  { transform: rotate(-1.3deg) scale(1.035); }
+  100% { transform: rotate(-0.5deg) scale(1); }
+}
+.stamp.stamp-impact{ animation: stampImpact 420ms var(--ease); }
+.mobile-status-bar.stamp-impact{ animation: stampImpact 420ms var(--ease); }
+
 /* AI CHAT */
 #viewAI{display:none;flex-direction:column;gap:0;}
 .ai-panel{

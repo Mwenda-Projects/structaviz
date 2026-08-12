@@ -14,6 +14,29 @@ let spanLoads     = [50, 50, 50];
 let spanLoadTypes = ['udl', 'udl', 'udl']; // 'udl' or 'point' per span
 let spanLoadPos   = [0.5, 0.5, 0.5];       // point load position as fraction of span
 
+// ─── COMPLIANCE STAMP STATE ─────────────────────────────────────────────────
+// go()/slabGo() re-run on every slider drag, so this must only animate on a
+// genuine pass↔fail transition — never on a recalculation that lands on the
+// same result, or the stamp would visibly twitch on every input.
+const _prevCompliance = {};
+function setComplianceState(el, dotEl, key, allPass) {
+  if (!el) return;
+  const state = allPass ? 'ok' : 'fail';
+  el.classList.remove('ok', 'fail');
+  el.classList.add(state);
+  if (dotEl) { dotEl.classList.remove('ok', 'fail'); dotEl.classList.add(state); }
+
+  const changed = _prevCompliance[key] !== undefined && _prevCompliance[key] !== allPass;
+  _prevCompliance[key] = allPass;
+  if (changed) {
+    clearTimeout(el._impactTimer);
+    el.classList.remove('stamp-impact');
+    void el.offsetWidth; // force reflow so the animation restarts if it fires again quickly
+    el.classList.add('stamp-impact');
+    el._impactTimer = setTimeout(() => el.classList.remove('stamp-impact'), 450);
+  }
+}
+
 // ─── PRO / MONETIZATION (mock — swap for real subscription check once billing is wired up) ────
 let isPro = localStorage.getItem('structaviz-pro') === 'true';
 
@@ -731,17 +754,15 @@ function kenyaCheck(p, maxDef, maxStress, maxMom, maxShr) {
 
   const allPass = checks.every(c => c.pass);
   const stamp = document.getElementById('stamp');
-  document.getElementById('stampDot').className = 'stamp-dot ' + (allPass?'ok':'fail');
+  setComplianceState(stamp, document.getElementById('stampDot'), 'beam', allPass);
   document.getElementById('stampText').textContent = allPass ? 'KS 02-104 COMPLIANT' : 'NON-COMPLIANT';
-  stamp.className = 'stamp ' + (allPass?'ok':'fail');
 
   // Sync mobile status bar
   const msbDot  = document.getElementById('msbDot');
   const msbText = document.getElementById('msbText');
   if (msbDot && msbText) {
-    msbDot.className  = 'msb-dot ' + (allPass ? 'ok' : 'fail');
+    setComplianceState(document.getElementById('mobileStatusBar'), msbDot, 'beamMobile', allPass);
     msbText.textContent = allPass ? 'KS 02-104 COMPLIANT' : 'NON-COMPLIANT';
-    document.getElementById('mobileStatusBar').className = 'mobile-status-bar ' + (allPass ? 'ok' : 'fail');
   }
 
   const cr = document.getElementById('codeResults');
@@ -2191,9 +2212,8 @@ function slabGo() {
   }
 
   const allPass = checks.every(c => c.pass);
-  document.getElementById('slabStampDot').className = 'stamp-dot ' + (allPass ? 'ok' : 'fail');
+  setComplianceState(document.getElementById('slabStamp'), document.getElementById('slabStampDot'), 'slab', allPass);
   document.getElementById('slabStampText').textContent = allPass ? 'DEFLECTION & THICKNESS OK' : 'CHECK REQUIRED';
-  document.getElementById('slabStamp').className = 'stamp ' + (allPass ? 'ok' : 'fail');
 
   const sr = document.getElementById('slabResults');
   sr.innerHTML = '';
