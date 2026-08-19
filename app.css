@@ -239,6 +239,13 @@ canvas{display:block;width:100%;}
 .leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
 .leg-line{width:18px;height:2px;border-radius:1px;}
 
+/* Review zone — compliance/optimizer/cost/saves/export, promoted out of the
+   sidebar since these are things you review, not controls you're dragging.
+   Full-width below the canvas (see comment in app.html for why). */
+.review-zone{margin-top:16px;}
+.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.review-secondary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+
 /* Optimizer */
 .optimize-btn{width:100%;padding:9px;background:transparent;border:1px solid var(--accent3);border-radius:8px;color:var(--accent3);font-family:var(--mono);font-size:11px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all var(--dur-fast) var(--ease);}
 .optimize-btn:hover{background:rgba(59,130,246,.1);}
@@ -432,6 +439,10 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   .tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap;padding-right:20px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent 100%);mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent 100%);}
   .tabs::-webkit-scrollbar{display:none;}
   .tab{white-space:nowrap;flex-shrink:0;padding:6px 12px;font-size:11px;}
+
+  /* Review zone — single column, scrolled in normal page flow below the canvas */
+  .review-grid{grid-template-columns:1fr;}
+  .review-secondary{grid-template-columns:1fr;}
 
   /* Panels & canvas */
   .panel{padding:10px;}
