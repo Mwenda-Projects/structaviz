@@ -158,7 +158,7 @@ select{width:100%;padding:7px 10px;background:var(--s3);border:1px solid var(--b
 
 /* MAIN — faint drafting grid, reads as material not decoration */
 .main{
-  padding:18px;display:flex;flex-direction:column;gap:14px;overflow:hidden;
+  padding:18px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;overflow-x:hidden;
   background-color:var(--bg);
   background-image:
     linear-gradient(var(--grid-line) 1px, transparent 1px),

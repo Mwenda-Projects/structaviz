@@ -332,11 +332,17 @@ function applyStdSection() {
   const h = s.h/1000, b = s.b/1000;
   const I = s.I * 1e-8, A = s.A * 1e-4;
   const type = (cat==='UB'||cat==='UC') ? 'ibeam' : cat==='CHS' ? 'circ' : 'hollow';
-  stdSectionOverride = { I, A, b, h, type, kg_m: s.kg_m, name: s.name,
-    ry: s.ry || null, Sx: s.Sx || null, u: s.u || null, x: s.x || null };
   document.getElementById('stdSecInfo').innerHTML =
     `<span>${s.name}</span><br>I = <span>${s.I} cm⁴</span> &nbsp; A = <span>${s.A} cm²</span><br>` +
     `h = <span>${s.h} mm</span> &nbsp; b = <span>${s.b} mm</span><br>Mass = <span>${s.kg_m} kg/m</span>`;
+  // Only actually apply this section to the live calculation if the user is
+  // in STD LIBRARY mode. Without this guard, calling populateStdSections()
+  // for any reason — including at page init, purely to pre-fill the dropdown
+  // — would silently switch the whole app onto whatever the first standard
+  // section happens to be, while every control still shows PARAMETRIC/300mm.
+  if (sectionMode !== 'std') return;
+  stdSectionOverride = { I, A, b, h, type, kg_m: s.kg_m, name: s.name,
+    ry: s.ry || null, Sx: s.Sx || null, u: s.u || null, x: s.x || null };
   go();
 }
 
@@ -2456,7 +2462,6 @@ window.addEventListener('pageshow', forceResync);
 window.addEventListener('load', () => setTimeout(forceResync, 60));
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-
 updateLoadPosVisibility();
 updatePosLabel();
 updateCombinedUDLVisibility();
