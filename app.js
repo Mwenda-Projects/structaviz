@@ -2324,7 +2324,7 @@ function slabGo() {
 function drawSlabPlan(p, Msx, Msy) {
   const c = document.getElementById('cSlab');
   const dpr = window.devicePixelRatio || 1;
-  const W = c.offsetWidth || 700, H = 340;
+  const W = c.offsetWidth || 640, H = 420;
   c.width = W * dpr; c.height = H * dpr;
   const ctx = c.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
