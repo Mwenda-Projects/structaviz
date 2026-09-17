@@ -268,18 +268,9 @@
       </div>
     </div>
 
-    <!-- Results -->
-    <div class="sec">
-      <div class="sec-label">BS 8110 Slab Check</div>
-      <div id="slabStamp" class="stamp ok" style="margin-bottom:10px;">
-        <div class="stamp-dot ok" id="slabStampDot"></div>
-        <span id="slabStampText">DEFLECTION OK</span>
-      </div>
-      <div class="code-results" id="slabResults"></div>
-      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:8px;line-height:1.5;">
-        Table 3.13 (simply supported, four sides) · deemed-to-satisfy deflection check assumes As,prov ≈ As,req. Reinforcement detailing not yet included.
-      </div>
-    </div>
+    <!-- Results have moved to a prominent stamp + checklist in the main view
+         (see slabMain) — a design failure shouldn't only be visible as one
+         red number buried at the bottom of the sidebar. -->
 
   </div>
 </div>
@@ -456,6 +447,11 @@
       <div class="metric"><div class="metric-label">Ly / Lx ratio</div><div class="metric-val" id="mSlabRatio">—</div></div>
     </div>
 
+    <div id="slabStamp" class="stamp ok" style="margin-bottom:14px;">
+      <div class="stamp-dot ok" id="slabStampDot"></div>
+      <span id="slabStampText">DEFLECTION OK</span>
+    </div>
+
     <div class="tabs">
       <button class="tab on">Plan View</button>
     </div>
@@ -463,6 +459,14 @@
     <div class="panel">
       <div class="panel-label">Slab Panel — Plan View</div>
       <canvas id="cSlab" height="340"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">BS 8110 Slab Check</div>
+      <div class="code-results" id="slabResults"></div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:8px;line-height:1.5;">
+        Table 3.13 (simply supported, four sides) · deemed-to-satisfy deflection check assumes As,prov ≈ As,req. Reinforcement detailing not yet included.
+      </div>
     </div>
   </div>
 </div>
