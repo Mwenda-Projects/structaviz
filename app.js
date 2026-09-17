@@ -2324,7 +2324,12 @@ function slabGo() {
 function drawSlabPlan(p, Msx, Msy) {
   const c = document.getElementById('cSlab');
   const dpr = window.devicePixelRatio || 1;
-  const W = c.offsetWidth || 640, H = 420;
+  const W = c.offsetWidth || 640;
+  // Height scales with width instead of being one fixed number — a fixed
+  // height that looks right on a wide desktop panel leaves a large empty
+  // gap above/below the rectangle on a narrow mobile width, since the
+  // rectangle naturally shrinks with width but the canvas didn't.
+  const H = Math.max(240, Math.min(420, W * 0.62));
   c.width = W * dpr; c.height = H * dpr;
   const ctx = c.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -2335,7 +2340,9 @@ function drawSlabPlan(p, Msx, Msy) {
   const accent3 = getCSSVar('--accent3') || '#3b82f6';
 
   // Panel rectangle — Ly drawn horizontally, Lx (short span) drawn vertically
-  const pad = 60;
+  // Padding also scales down on narrow widths — a fixed 60px eats nearly
+  // half of a ~260px-wide mobile canvas on its own.
+  const pad = Math.max(36, Math.min(60, W * 0.11));
   const availW = W - pad * 2, availH = H - pad * 2;
   const scale = Math.min(availW / p.Ly, availH / p.Lx);
   const rw = p.Ly * scale, rh = p.Lx * scale;
