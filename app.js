@@ -2211,35 +2211,31 @@ function setMode(m) {
 function getSlabParams() {
   const LxIn = parseFloat(document.getElementById('sSlabLx').value);
   const LyIn = parseFloat(document.getElementById('sSlabLy').value);
-  const Lx = LxIn;
-  const Ly = LyIn;
-  const shortSpan = Math.min(Lx, Ly);
-  const longSpan = Math.max(Lx, Ly);
+  const Lx = Math.min(LxIn, LyIn);   // short span, always ≤ Ly
+  const Ly = Math.max(LxIn, LyIn);
   const h   = parseFloat(document.getElementById('sSlabH').value); // mm
   const fcu = parseFloat(document.getElementById('sSlabFcu').value);
   const fy  = parseFloat(document.getElementById('sSlabFy').value);
   const qk  = parseFloat(document.getElementById('sSlabQk').value); // kN/m²
   const selfWeight = document.getElementById('slabSelfWeight').checked ? 24 * (h / 1000) : 0;
   const n = qk + selfWeight; // total design load, kN/m² (simplified — no separate load factors, consistent with beam module)
-  const ratio = longSpan / shortSpan;
+  const ratio = Ly / Lx;
   const oneWay = ratio > 2.0;
-  return { Lx, Ly, shortSpan, longSpan, h, fcu, fy, qk, selfWeight, n, ratio, oneWay };
+  return { Lx, Ly, h, fcu, fy, qk, selfWeight, n, ratio, oneWay };
 }
 
 function slabGo() {
   const p = getSlabParams();
 
-  const shortSpan = p.shortSpan;
-  const longSpan = p.longSpan;
   let Msx, Msy;
   if (p.oneWay) {
-    // long/short > 2 — treated as a 1m-wide simply supported strip spanning the short span
-    Msx = (p.n * shortSpan * shortSpan) / 8;
+    // Ly/Lx > 2 — treated as a 1m-wide simply supported strip spanning Lx
+    Msx = (p.n * p.Lx * p.Lx) / 8;
     Msy = 0;
   } else {
     const c = slabCoeffs(p.ratio);
-    Msx = c.asx * p.n * shortSpan * shortSpan;
-    Msy = c.asy * p.n * shortSpan * shortSpan;
+    Msx = c.asx * p.n * p.Lx * p.Lx;
+    Msy = c.asy * p.n * p.Lx * p.Lx;
   }
 
   // Effective depth — assumes 12mm main bars, 25mm cover (typical floor slab)
@@ -2256,11 +2252,19 @@ function slabGo() {
   const AsY = p.oneWay ? 0 : reqAs(Msy);
   const AsMinPct = p.fy >= 460 ? 0.0013 : 0.0024; // BS 8110 minimum reinforcement ratio
   const AsMin = AsMinPct * 1000 * p.h;
+  const AsProvX = Math.max(AsX, AsMin); // reinforcement actually provided, short span
 
-  // Deflection — BS 8110 basic span/effective-depth ratio (simply supported = 20, unmodified)
+  // Deflection — BS 8110 basic span/effective-depth ratio (simply supported = 20),
+  // scaled by the tension-reinforcement modification factor (cl 3.4.6.5 / Table 3.10).
+  // fs = service stress in tension steel under working load, assuming βb = 1
+  // (no moment redistribution). M/bd² uses the short-span moment on a 1m-wide strip.
   const basicRatio = 20;
-  const actualLd = (p.shortSpan * 1000) / d;
-  const defPass = actualLd <= basicRatio;
+  const fs = 0.625 * p.fy * (AsX / AsProvX);
+  const Mbd2 = (Msx * 1e6) / (1000 * d * d); // N/mm²
+  const modFactor = Math.min(0.55 + (477 - fs) / (120 * (0.9 + Mbd2)), 2.0);
+  const allowLd = basicRatio * modFactor;
+  const actualLd = (p.Lx * 1000) / d;
+  const defPass = actualLd <= allowLd;
 
   // Minimum practical thickness for a solid floor slab
   const minThk = 125;
@@ -2269,8 +2273,8 @@ function slabGo() {
   // ── Classification badge ──
   const badge = document.getElementById('slabTypeBadge');
   badge.textContent = p.oneWay
-    ? `ONE-WAY · long/short = ${p.ratio.toFixed(2)} (>2.0)`
-    : `TWO-WAY · long/short = ${p.ratio.toFixed(2)}`;
+    ? `ONE-WAY · Ly/Lx = ${p.ratio.toFixed(2)} (>2.0)`
+    : `TWO-WAY · Ly/Lx = ${p.ratio.toFixed(2)}`;
 
   // ── Metrics strip ──
   document.getElementById('mSlabMsx').textContent = Msx.toFixed(2) + ' kN·m/m';
@@ -2278,7 +2282,7 @@ function slabGo() {
   document.getElementById('mSlabN').textContent   = p.n.toFixed(2) + ' kN/m²';
   document.getElementById('mSlabLd').textContent  = actualLd.toFixed(1);
   document.getElementById('mSlabLd').className    = 'metric-val ' + (defPass ? 'ok' : 'fail');
-  document.getElementById('mSlabAllowLd').textContent = basicRatio.toFixed(0);
+  document.getElementById('mSlabAllowLd').textContent = allowLd.toFixed(1);
   document.getElementById('mSlabRatio').textContent = p.ratio.toFixed(2);
 
   // ── Compliance panel ──
@@ -2286,7 +2290,7 @@ function slabGo() {
     {
       name: 'Deflection (span/depth, basic ratio)',
       pass: defPass, warn: actualLd <= basicRatio * 1.1,
-      val: `L/d = ${actualLd.toFixed(1)} / ${basicRatio} max`
+      val: `L/d = ${actualLd.toFixed(1)} / ${allowLd.toFixed(1)} max (factor ${modFactor.toFixed(2)})`
     },
     {
       name: 'Minimum slab thickness',
@@ -2347,12 +2351,15 @@ function drawSlabPlan(p, Msx, Msy) {
   // Padding also scales down on narrow widths — a fixed 60px eats nearly
   // half of a ~260px-wide mobile canvas on its own.
   const pad = Math.max(36, Math.min(60, W * 0.11));
-  const availW = W - pad * 2, availH = H - pad * 2;
-  const shortSpan = p.shortSpan;
-  const longSpan = p.longSpan;
-  const scale = Math.min(availW / longSpan, availH / shortSpan);
-  const rw = longSpan * scale, rh = shortSpan * scale;
-  const rx = (W - rw) / 2, ry = (H - rh) / 2;
+  // The rotated "Lx = …" label draws at rx-34, outside the rectangle's own
+  // bounding box. Reserve that same 34px on the left in addition to the
+  // normal `pad`, so on narrow (mobile) canvases the rectangle doesn't get
+  // scaled edge-to-edge and push the label off-canvas.
+  const padLeft = pad + 34;
+  const availW = W - padLeft - pad, availH = H - pad * 2;
+  const scale = Math.min(availW / p.Ly, availH / p.Lx);
+  const rw = p.Ly * scale, rh = p.Lx * scale;
+  const rx = padLeft + (availW - rw) / 2, ry = pad + (availH - rh) / 2;
 
   ctx.fillStyle = 'rgba(0,200,150,0.06)';
   ctx.fillRect(rx, ry, rw, rh);
@@ -2377,11 +2384,11 @@ function drawSlabPlan(p, Msx, Msy) {
   ctx.fillStyle = text2;
   ctx.font = '11px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText(`Long span = ${longSpan.toFixed(2)} m`, rx + rw / 2, ry + rh + 30);
+  ctx.fillText(`Ly = ${p.Ly.toFixed(2)} m`, rx + rw / 2, ry + rh + 30);
   ctx.save();
   ctx.translate(rx - 34, ry + rh / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText(`Short span = ${shortSpan.toFixed(2)} m`, 0, 0);
+  ctx.fillText(`Lx = ${p.Lx.toFixed(2)} m`, 0, 0);
   ctx.restore();
 
   // Classification label
