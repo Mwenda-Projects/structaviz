@@ -2211,31 +2211,35 @@ function setMode(m) {
 function getSlabParams() {
   const LxIn = parseFloat(document.getElementById('sSlabLx').value);
   const LyIn = parseFloat(document.getElementById('sSlabLy').value);
-  const Lx = Math.min(LxIn, LyIn);   // short span, always ≤ Ly
-  const Ly = Math.max(LxIn, LyIn);
+  const Lx = LxIn;
+  const Ly = LyIn;
+  const shortSpan = Math.min(Lx, Ly);
+  const longSpan = Math.max(Lx, Ly);
   const h   = parseFloat(document.getElementById('sSlabH').value); // mm
   const fcu = parseFloat(document.getElementById('sSlabFcu').value);
   const fy  = parseFloat(document.getElementById('sSlabFy').value);
   const qk  = parseFloat(document.getElementById('sSlabQk').value); // kN/m²
   const selfWeight = document.getElementById('slabSelfWeight').checked ? 24 * (h / 1000) : 0;
   const n = qk + selfWeight; // total design load, kN/m² (simplified — no separate load factors, consistent with beam module)
-  const ratio = Ly / Lx;
+  const ratio = longSpan / shortSpan;
   const oneWay = ratio > 2.0;
-  return { Lx, Ly, h, fcu, fy, qk, selfWeight, n, ratio, oneWay };
+  return { Lx, Ly, shortSpan, longSpan, h, fcu, fy, qk, selfWeight, n, ratio, oneWay };
 }
 
 function slabGo() {
   const p = getSlabParams();
 
+  const shortSpan = p.shortSpan;
+  const longSpan = p.longSpan;
   let Msx, Msy;
   if (p.oneWay) {
-    // Ly/Lx > 2 — treated as a 1m-wide simply supported strip spanning Lx
-    Msx = (p.n * p.Lx * p.Lx) / 8;
+    // long/short > 2 — treated as a 1m-wide simply supported strip spanning the short span
+    Msx = (p.n * shortSpan * shortSpan) / 8;
     Msy = 0;
   } else {
     const c = slabCoeffs(p.ratio);
-    Msx = c.asx * p.n * p.Lx * p.Lx;
-    Msy = c.asy * p.n * p.Lx * p.Lx;
+    Msx = c.asx * p.n * shortSpan * shortSpan;
+    Msy = c.asy * p.n * shortSpan * shortSpan;
   }
 
   // Effective depth — assumes 12mm main bars, 25mm cover (typical floor slab)
@@ -2255,7 +2259,7 @@ function slabGo() {
 
   // Deflection — BS 8110 basic span/effective-depth ratio (simply supported = 20, unmodified)
   const basicRatio = 20;
-  const actualLd = (p.Lx * 1000) / d;
+  const actualLd = (p.shortSpan * 1000) / d;
   const defPass = actualLd <= basicRatio;
 
   // Minimum practical thickness for a solid floor slab
@@ -2265,8 +2269,8 @@ function slabGo() {
   // ── Classification badge ──
   const badge = document.getElementById('slabTypeBadge');
   badge.textContent = p.oneWay
-    ? `ONE-WAY · Ly/Lx = ${p.ratio.toFixed(2)} (>2.0)`
-    : `TWO-WAY · Ly/Lx = ${p.ratio.toFixed(2)}`;
+    ? `ONE-WAY · long/short = ${p.ratio.toFixed(2)} (>2.0)`
+    : `TWO-WAY · long/short = ${p.ratio.toFixed(2)}`;
 
   // ── Metrics strip ──
   document.getElementById('mSlabMsx').textContent = Msx.toFixed(2) + ' kN·m/m';
@@ -2344,8 +2348,10 @@ function drawSlabPlan(p, Msx, Msy) {
   // half of a ~260px-wide mobile canvas on its own.
   const pad = Math.max(36, Math.min(60, W * 0.11));
   const availW = W - pad * 2, availH = H - pad * 2;
-  const scale = Math.min(availW / p.Ly, availH / p.Lx);
-  const rw = p.Ly * scale, rh = p.Lx * scale;
+  const shortSpan = p.shortSpan;
+  const longSpan = p.longSpan;
+  const scale = Math.min(availW / longSpan, availH / shortSpan);
+  const rw = longSpan * scale, rh = shortSpan * scale;
   const rx = (W - rw) / 2, ry = (H - rh) / 2;
 
   ctx.fillStyle = 'rgba(0,200,150,0.06)';
@@ -2371,11 +2377,11 @@ function drawSlabPlan(p, Msx, Msy) {
   ctx.fillStyle = text2;
   ctx.font = '11px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText(`Ly = ${p.Ly.toFixed(2)} m`, rx + rw / 2, ry + rh + 30);
+  ctx.fillText(`Long span = ${longSpan.toFixed(2)} m`, rx + rw / 2, ry + rh + 30);
   ctx.save();
   ctx.translate(rx - 34, ry + rh / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText(`Lx = ${p.Lx.toFixed(2)} m`, 0, 0);
+  ctx.fillText(`Short span = ${shortSpan.toFixed(2)} m`, 0, 0);
   ctx.restore();
 
   // Classification label
