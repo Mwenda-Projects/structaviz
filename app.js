@@ -1406,7 +1406,9 @@ function draw2d(xs, defs, moms, shrs, p, allowDef) {
   ctx.stroke();
   const mi=defs.indexOf(Math.max(...defs));
   ctx.font='10px Space Mono,monospace'; ctx.fillStyle='#00c896'; ctx.textAlign='center';
+  ctx.textAlign = mi > N*0.8 ? 'right' : 'center';
   ctx.fillText('δ='+(Math.max(...defs)*1000).toFixed(1)+'mm', PL+bW*mi/N, beamY+defs[mi]*ds+15);
+  ctx.textAlign = 'center';
 
   // BMD
   ctx.lineWidth=1.5;
