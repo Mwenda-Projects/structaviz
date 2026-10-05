@@ -453,10 +453,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   /* Panels & canvas */
   .panel{padding:10px;}
   .panel-label{font-size:8px;margin-bottom:8px;}
-  #c2d{max-height:240px;}
-  #c3d{max-height:240px;}
-  #cSec{max-height:240px;}
-
+  
   /* Legend */
   .legend{flex-direction:row;flex-wrap:wrap;gap:8px;}
   .leg{font-size:10px;}
