@@ -1104,7 +1104,7 @@ function draw2dMultiSpan(result, p) {
 
   const PL=56, PR=20, PT=40, PB=30;
   const bW = W-PL-PR;
-   const beamY=H*0.30, momBase=H*0.68, shrBase=H*0.90;
+  const beamY=H*0.30, momBase=H*0.62, shrBase=H*0.87;
   const N = xs.length-1;
 
   const maxDef = Math.max(...defs.map(Math.abs))||1e-9;
@@ -1321,7 +1321,7 @@ function draw2d(xs, defs, moms, shrs, p, allowDef) {
 
   const PL=56,PR=20,PT=40,PB=30;
   const bW=W-PL-PR, N=xs.length-1;
-  const beamY=H*0.30, momBase=H*0.62, shrBase=H*0.87;
+  const beamY=H*0.30, momBase=H*0.68, shrBase=H*0.90;
   const maxDef=Math.max(...defs)||1e-9;
   const maxMom=Math.max(...moms.map(Math.abs))||1e-9;
   const maxShr=Math.max(...shrs.map(Math.abs))||1e-9;
