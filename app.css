@@ -505,6 +505,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
 }
 /* Slab mode: restore the same card-to-card spacing the rest of the page uses */
 #slabMain{display:flex;flex-direction:column;gap:14px;}
+#slabStamp{transform:none;}
 @media (max-width:768px){
   #slabMain{gap:8px;}
 }
