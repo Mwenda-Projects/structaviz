@@ -2302,14 +2302,14 @@ function slabGo() {
     {
       name: 'Reinforcement required — short span',
       pass: true, warn: false,
-      val: `As,req ${AsX.toFixed(0)} mm²/m · As,min ${AsMin.toFixed(0)} mm²/m → provide ${Math.max(AsX, AsMin).toFixed(0)} mm²/m`
+      val: `As,req ${AsX.toFixed(0)} · As,min ${AsMin.toFixed(0)} mm²/m<br>→ provide ${Math.max(AsX, AsMin).toFixed(0)} mm²/m`
     }
   ];
   if (!p.oneWay) {
     checks.push({
       name: 'Reinforcement required — long span',
       pass: true, warn: false,
-      val: `As,req ${AsY.toFixed(0)} mm²/m · As,min ${AsMin.toFixed(0)} mm²/m → provide ${Math.max(AsY, AsMin).toFixed(0)} mm²/m`
+      val: `As,req ${AsY.toFixed(0)} · As,min ${AsMin.toFixed(0)} mm²/m<br>→ provide ${Math.max(AsY, AsMin).toFixed(0)} mm²/m`
     });
   }
 
