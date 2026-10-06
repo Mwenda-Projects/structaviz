@@ -503,3 +503,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   .sheet-handle-bar{width:36px;height:4px;border-radius:2px;background:var(--border2);}
   .sheet-handle-label{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;}
 }
+/* Slab mode: restore the same card-to-card spacing the rest of the page uses */
+#slabMain{display:flex;flex-direction:column;gap:14px;}
+@media (max-width:768px){
+  #slabMain{gap:8px;}
+}
