@@ -968,7 +968,8 @@ function applyOptimizedSection(cat, name) {
 function updateCost() {
   if (!lastParams) return;
   const p = lastParams;
-  const vol  = p.sec.A * p.L;
+  const totalLen = spanCount > 1 ? spanLengths.slice(0, spanCount).reduce((a, b) => a + b, 0) : p.L;
+  const vol  = p.sec.A * totalLen;
   const mass = vol * p.density;
   const raw  = parseFloat(document.getElementById('pricePerKg').value);
   const ppkg = (!isNaN(raw) && raw > 0) ? raw : 120;
@@ -1852,8 +1853,9 @@ async function exportReport(){
     const isCompliant = compliant.includes('COMPLIANT') && !compliant.includes('NON');
     const raw  = parseFloat(document.getElementById('pricePerKg').value);
     const ppkg = (!isNaN(raw)&&raw>0)?raw:120;
-    const mass = (p.sec.A*p.L*p.density).toFixed(1);
-    const total = (p.sec.A*p.L*p.density*ppkg).toLocaleString('en-KE',{maximumFractionDigits:0});
+    const totalLen = multi ? spanLengths.slice(0, spanCount).reduce((a, b) => a + b, 0) : p.L;
+    const mass = (p.sec.A*totalLen*p.density).toFixed(1);
+    const total = (p.sec.A*totalLen*p.density*ppkg).toLocaleString('en-KE',{maximumFractionDigits:0});
     const posText = load==='point'?' at '+(getLoadPos()*100).toFixed(0)+'% of span':'';
 
     const contentW = W - ML - MR;
@@ -1978,7 +1980,7 @@ async function exportReport(){
       ['Max bending moment', document.getElementById('mMom').textContent, '—'],
       ['Max bending stress', document.getElementById('mStress').textContent, `${(p.fy/1e6).toFixed(0)} MPa (fy)`],
       ['Max shear force', document.getElementById('mShear').textContent, `${(Vpl/1000).toFixed(1)} kN (Vpl)`],
-      ['Safety factor', document.getElementById('mSF').textContent, '≥ 1.67'],
+      ['Safety factor', document.getElementById('mSF').textContent, '>= 1.67'],
     ];
     if (multi) {
       msResult.R.forEach((r, i) => {
@@ -2007,8 +2009,8 @@ async function exportReport(){
       const isPass=item.classList.contains('pass'), isWarn=item.classList.contains('warn');
       const bg   = isPass?[209,250,229]:isWarn?[254,243,199]:[254,226,226];
       const tCol = isPass?[6,95,70]:isWarn?[120,53,15]:[153,27,27];
-      const name = item.querySelector('.code-name')?.textContent||'';
-      const val  = item.querySelector('.code-val')?.textContent||'';
+      const name = (item.querySelector('.code-name')?.textContent||'').replace(/≥/g,'>=');
+      const val  = (item.querySelector('.code-val')?.textContent||'').replace(/λ/g,'lambda ');
       const badge= item.querySelector('.code-badge')?.textContent||'';
       const rowH = 9;
       doc.setFillColor(...bg);
@@ -2031,7 +2033,7 @@ async function exportReport(){
     const colW2b = [80, contentW-80];
     tableRow(['Item','Value'], colW2b, true, [248,250,252]);
     [
-      ['Volume', (p.sec.A*p.L).toFixed(4)+' m³'],
+      ['Volume', (p.sec.A*totalLen).toFixed(4)+' m³'],
       ['Mass', mass+' kg'],
       ['Price per kg', 'KES '+ppkg],
       ['Estimated material cost', 'KES '+total],
@@ -2054,6 +2056,8 @@ async function exportReport(){
     const imgW = contentW;
     const imgH = imgW * (c2d.height / c2d.width);
     checkPage(imgH+4);
+    doc.setFillColor(13, 17, 23);
+    doc.roundedRect(ML, y, imgW, Math.min(imgH, 80), 2, 2, 'F');
     doc.addImage(imgData, 'PNG', ML, y, imgW, Math.min(imgH, 80));
     y += Math.min(imgH, 80) + 4;
 
