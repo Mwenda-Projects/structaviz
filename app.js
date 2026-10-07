@@ -176,13 +176,13 @@ function setSpanCount(n) {
   // Show/hide single-span load type and position (only for single span)
   document.getElementById('singleSpanLoadSec').style.display = n === 1 ? '' : 'none';
 
-  if (n > 1) buildSpanControls();
+  if (n > 1) buildSpanControls(); else hideSpanSummary();
   go();
 }
 
 function buildSpanControls() {
   const wrap = document.getElementById('spanControlsWrap');
-  wrap.innerHTML = '';
+  wrap.innerHTML = endSupportControlHTML();
   for (let i = 0; i < spanCount; i++) {
     const isPoint = spanLoadTypes[i] === 'point';
     wrap.innerHTML += `
@@ -1163,7 +1163,20 @@ function draw2dMultiSpan(result, p) {
     ctx.strokeStyle='rgba(0,200,150,0.7)';ctx.lineWidth=1.2;ctx.stroke();
     ctx.beginPath();ctx.moveTo(x-11,y+14);ctx.lineTo(x+11,y+14);ctx.stroke();
   }
-  supportXs.forEach(sx => pin(xToCanvas(sx), beamY));
+  supportXs.forEach((sx, i) => {
+    const x = xToCanvas(sx), last = i === supportXs.length - 1;
+    const fixedEnd = (i === 0 && endFix[0] === 'fixed') || (last && endFix[1] === 'fixed');
+    if (!fixedEnd) { pin(x, beamY); return; }
+    const dir = last ? 1 : -1;
+    ctx.fillStyle = 'rgba(0,200,150,0.15)'; ctx.strokeStyle = 'rgba(0,200,150,0.6)'; ctx.lineWidth = 1.2;
+    ctx.fillRect(last ? x : x - 12, beamY - 20, 12, 40);
+    ctx.beginPath(); ctx.moveTo(x, beamY - 20); ctx.lineTo(x, beamY + 20); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,200,150,0.3)';
+    for (let k = 0; k < 4; k++) {
+      const yy = beamY - 15 + k * 10;
+      ctx.beginPath(); ctx.moveTo(x + dir * 12, yy); ctx.lineTo(x + dir * 19, yy + 7); ctx.stroke();
+    }
+  });
 
   // Load arrows per span — UDL or point load
   ctx.strokeStyle='#f97316'; ctx.fillStyle='#f97316'; ctx.lineWidth=1.2;
@@ -1232,33 +1245,16 @@ function draw2dMultiSpan(result, p) {
 
   // Interior support moment labels
   result.Ms.forEach((M,i)=>{
-    if(i===0||i===result.Ms.length-1) return;
+    if(Math.abs(M) < 1e-6) return;
     const cx=xToCanvas(supportXs[i]);
     ctx.font='9px Space Mono,monospace'; ctx.fillStyle='rgba(239,68,68,0.8)'; ctx.textAlign='center';
     ctx.fillText('M='+(M/1000).toFixed(1)+'kNm', cx, momBase+10);
   });
 
-  // Reaction forces at each support (from span equilibrium)
-  // Y position dynamically clears the limit-line label above (see defLim, line ~1012)
+  // Reaction at each support (from the solver)
   const rxnLabelY = Math.max(beamY + 30, beamY + defLim + 16);
   ctx.font='10px Space Mono,monospace'; ctx.fillStyle='rgba(0,200,150,0.9)'; ctx.textAlign='center';
-  const spansSlice = spanLengths.slice(0, spanCount);
-  const loadsSlice = spanLoads.slice(0, spanCount).map(v => v * 1000);
-  const Ms = result.Ms;
-  spansSlice.forEach((Ls, si) => {
-    const w  = loadsSlice[si];
-    const ML = Ms[si], MR = Ms[si + 1];
-    const RL = w * Ls / 2 + (ML - MR) / Ls;
-    const RR = w * Ls - RL;
-    // Left support of span gets RL, right support gets RR (accumulate if interior)
-    const xL = xToCanvas(supportXs[si]);
-    const xR = xToCanvas(supportXs[si + 1]);
-    if (si === 0) ctx.fillText('R=' + (RL / 1000).toFixed(1) + 'kN', xL, rxnLabelY);
-    // Interior supports: show combined reaction from both adjacent spans
-    const combinedR = si === 0 ? RR : RR + (loadsSlice[si - 1] * spansSlice[si - 1] / 2 + (Ms[si - 1] - Ms[si]) / spansSlice[si - 1]);
-    ctx.fillText('R=' + (si === spanCount - 1 ? (RR / 1000).toFixed(1) : (combinedR / 1000).toFixed(1)) + 'kN', xR, rxnLabelY);
-  });
-
+  result.R.forEach((R, i) => ctx.fillText('R=' + (R / 1000).toFixed(1) + 'kN', xToCanvas(supportXs[i]), rxnLabelY));
   // X axis labels
   ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
   supportXs.forEach(sx => ctx.fillText(sx.toFixed(1)+'m', xToCanvas(sx), H-6));
@@ -1297,6 +1293,7 @@ function go() {
     kenyaCheck({...p, L:totalL/spanCount}, maxDef, maxStress, maxMom, maxShr);
     updateCost();
 
+    renderSpanSummary(result);
     if (view==='2d')      draw2dMultiSpan(result, p);
     if (view==='3d')      draw3d(p, maxDef);
     if (view==='section') drawSection(p);
@@ -2072,6 +2069,7 @@ function captureState() {
     spanLoads:    [...spanLoads],
     spanLoadTypes:[...spanLoadTypes],
     spanLoadPos:  [...spanLoadPos],
+    endFix:       [...endFix],
     sLoad:        document.getElementById('sLoad').value,
     sLen:         document.getElementById('sLen').value,
     sH:           document.getElementById('sH').value,
@@ -2127,6 +2125,7 @@ function restoreState(s) {
   spanLoads     = s.spanLoads     || [50,50,50];
   spanLoadTypes = s.spanLoadTypes || ['udl','udl','udl'];
   spanLoadPos   = s.spanLoadPos   || [0.5,0.5,0.5];
+  endFix        = s.endFix        || ['pin','pin'];
   setSpanCount(spanCount, true);
 
   // Section mode

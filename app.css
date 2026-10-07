@@ -509,3 +509,21 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
 @media (max-width:768px){
   #slabMain{gap:8px;}
 }
+/* ── Multi-span: support results card + end-support toggle ── */
+.ms-card{background:var(--s2,var(--s1));border:1px solid var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.ms-card-title{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.ms-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.ms-table th{text-align:right;font-weight:500;color:var(--text3);padding:4px 6px;border-bottom:1px solid var(--border2)}
+.ms-table td{text-align:right;padding:5px 6px;color:var(--text2);border-bottom:1px solid var(--border2)}
+.ms-table th:first-child,.ms-table td:first-child{text-align:left}
+.ms-table td:first-child{color:var(--accent);font-weight:700}
+.ms-table td.hog{color:#ef4444}
+.ms-table tr:last-child td{border-bottom:none}
+.ms-note{font-size:10px;color:var(--text3);margin-top:6px}
+.ms-ends{margin-bottom:14px}
+.ms-seg-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+.ms-seg-label{font-size:12px;color:var(--text2)}
+.ms-seg{display:inline-flex;background:var(--s3);border:1px solid var(--border2);border-radius:8px;padding:2px}
+.ms-seg button{border:0;background:transparent;color:var(--text2);font:inherit;font-size:11px;padding:5px 12px;min-height:30px;border-radius:6px;cursor:pointer}
+.ms-seg button.on{background:var(--accent);color:#04120d;font-weight:700}
+.ms-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
