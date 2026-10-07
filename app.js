@@ -1830,15 +1830,17 @@ async function exportReport(){
     const ML = 18, MR = 18, MT = 20;
     let y = MT;
 
+    const multi = spanCount > 1;
     const p = lastParams || getParams();
+    const msResult = multi ? solveMultiSpan(p) : null;
     const N = 200, xs = Array.from({length:N+1},(_,i)=>p.L*i/N);
-    const defs = xs.map(x=>defAt(x,p));
-    const moms = xs.map(x=>momAt(x,p));
-    const shrs = xs.map(x=>shearAt(x,p));
+    const defs = multi ? msResult.defs : xs.map(x=>defAt(x,p));
+    const moms = multi ? msResult.moms : xs.map(x=>momAt(x,p));
+    const shrs = multi ? msResult.shrs : xs.map(x=>shearAt(x,p));
     const maxShr  = Math.max(...shrs.map(Math.abs));
     const Vpl     = shearCapacity(p.sec, p.fy);
-    const deflRatio = beam==='cantilever'?180:360;
-    const allowDef  = p.L/deflRatio;
+    const deflRatio = (beam==='cantilever' && !multi) ? 180 : 360;
+    const allowDef  = multi ? Math.min(...spanLengths.slice(0,spanCount))/360 : p.L/deflRatio;
 
     const matEl   = document.getElementById('sMat');
     const matStr  = matEl.options[matEl.selectedIndex].text;
@@ -1940,14 +1942,28 @@ async function exportReport(){
     sectionTitle('Input Parameters');
     const colW2 = [80, contentW-80];
     tableRow(['Parameter','Value'], colW2, true, [248,250,252]);
-    const rows = [
+    const endName = e => e === 'fixed' ? 'fixed' : 'pinned';
+    const spanRows = Array.from({length: spanCount}, (_, i) => [
+      `Span ${i+1}`,
+      `${spanLengths[i]} m · ` + (spanLoadTypes[i] === 'point'
+        ? `${spanLoads[i]} kN point load at ${(spanLoadPos[i]*100).toFixed(0)}% of span`
+        : `${spanLoads[i]} kN/m UDL`)
+    ]);
+    const selfWtTxt = document.getElementById('selfWeight').checked ? 'Included' : 'Excluded';
+    const rows = multi ? [
+      ['Beam type', `Continuous, ${spanCount} spans (${endName(endFix[0])} left, ${endName(endFix[1])} right)`],
+      ['Cross section', secName],
+      ...spanRows,
+      ['Material', matStr],
+      ['Self-weight', selfWtTxt],
+    ] : [
       ['Beam type', beamNames[beam]||beam],
       ['Cross section', secName],
       ['Load type', (loadNames[load]||load)+posText],
       ['Load magnitude', document.getElementById('sLoad').value+(load!=='point'?' kN/m':' kN')],
       ['Span', document.getElementById('sLen').value+' m'],
       ['Material', matStr],
-      ['Self-weight', document.getElementById('selfWeight').checked?'Included':'Excluded'],
+      ['Self-weight', selfWtTxt],
     ];
     rows.forEach((r,i) => tableRow(r, colW2, false, i%2===0?null:[248,250,252]));
     y += 4;
@@ -1964,7 +1980,13 @@ async function exportReport(){
       ['Max shear force', document.getElementById('mShear').textContent, `${(Vpl/1000).toFixed(1)} kN (Vpl)`],
       ['Safety factor', document.getElementById('mSF').textContent, '≥ 1.67'],
     ];
-    if (beam==='cantilever') {
+    if (multi) {
+      msResult.R.forEach((r, i) => {
+        const m = msResult.Ms[i], tag = String.fromCharCode(65 + i);
+        resultRows.push([`Reaction at support ${tag}`, (r/1000).toFixed(2)+' kN', '—']);
+        if (Math.abs(m) > 1e-6) resultRows.push([`Moment at support ${tag}`, (m/1000).toFixed(2)+' kN·m', '—']);
+      });
+    } else if (beam==='cantilever') {
       resultRows.push(['Support reaction (R)', (rxn.RL/1000).toFixed(2)+' kN', '—']);
       resultRows.push(['Fixed-end moment (MA)', (rxn.MA/1000).toFixed(2)+' kN·m', '—']);
     } else {
@@ -2024,7 +2046,8 @@ async function exportReport(){
     const c2d = document.getElementById('c2d');
     const prevDisplay = document.getElementById('view2d').style.display;
     document.getElementById('view2d').style.display='';
-    draw2d(xs, defs, moms, shrs, p, allowDef);
+    if (multi) draw2dMultiSpan(msResult, p);
+    else draw2d(xs, defs, moms, shrs, p, allowDef);
     const imgData = c2d.toDataURL('image/png');
     document.getElementById('view2d').style.display = prevDisplay;
 
