@@ -761,7 +761,7 @@ function shearAt(x, p) {
 // ─── KENYA CODE CHECK ─────────────────────────────────────────────────────────
 function kenyaCheck(p, maxDef, maxStress, maxMom, maxShr) {
   const { L, fy, sec } = p;
-  const deflRatio = beam === 'cantilever' ? 180 : 360;
+  const deflRatio = (beam === 'cantilever' && spanCount === 1) ? 180 : 360;
   const allowDef  = L / deflRatio;
   const utilStress = maxStress / fy;
   const SF = fy / maxStress;
@@ -1254,7 +1254,11 @@ function draw2dMultiSpan(result, p) {
   // Reaction at each support (from the solver)
   const rxnLabelY = Math.max(beamY + 30, beamY + defLim + 16);
   ctx.font='10px Space Mono,monospace'; ctx.fillStyle='rgba(0,200,150,0.9)'; ctx.textAlign='center';
-  result.R.forEach((R, i) => ctx.fillText('R=' + (R / 1000).toFixed(1) + 'kN', xToCanvas(supportXs[i]), rxnLabelY));
+  result.R.forEach((R, i) => {
+    ctx.textAlign = i === 0 ? 'left' : i === result.R.length - 1 ? 'right' : 'center';
+    ctx.fillText('R=' + (R / 1000).toFixed(1) + 'kN', xToCanvas(supportXs[i]), rxnLabelY);
+  });
+  ctx.textAlign = 'center';
   // X axis labels
   ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='9px Space Mono,monospace'; ctx.textAlign='center';
   supportXs.forEach(sx => ctx.fillText(sx.toFixed(1)+'m', xToCanvas(sx), H-6));
