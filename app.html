@@ -148,12 +148,7 @@ Continuous beam · Pinned or fixed ends · UDL or point load per span
                oninput="updatePosLabel();go()">
       </div>
     </div>
-    <div style="margin-top:10px;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2);">
-        <input type="checkbox" id="selfWeight" onchange="go()" style="accent-color:var(--accent);width:13px;height:13px;">
-        Include self-weight
-      </label>
-    </div>
+
     <!-- Combined loading — only visible when Point load is selected -->
     <div id="combineWrap" style="margin-top:10px;display:none;">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2);">
@@ -176,6 +171,10 @@ Continuous beam · Pinned or fixed ends · UDL or point load per span
   <!-- Parameters -->
   <div class="sec">
     <div class="sec-label">Parameters</div>
+    <label class="check-row">
+      <input type="checkbox" id="selfWeight" onchange="go()">
+      Include self-weight
+    </label>
     <div class="ctrl">
       <div class="ctrl-row"><span class="ctrl-name" id="loadLabel">Load (kN)</span><span class="ctrl-val" id="vLoad">50</span></div>
       <input type="range" id="sLoad" autocomplete="off" min="5" max="500" value="50" oninput="sv('vLoad',this.value,'');go()">

@@ -762,7 +762,7 @@ function shearAt(x, p) {
 function kenyaCheck(p, maxDef, maxStress, maxMom, maxShr) {
   const { L, fy, sec } = p;
   const deflRatio = (beam === 'cantilever' && spanCount === 1) ? 180 : 360;
-  const allowDef  = L / deflRatio;
+  const allowDef  = (p.Ldef || L) / deflRatio;
   const utilStress = maxStress / fy;
   const SF = fy / maxStress;
   const sectionUtil = maxMom / (fy * sec.I / (sec.h/2));
@@ -1295,7 +1295,8 @@ function go() {
     document.getElementById('mSF').className         = 'metric-val ' + (SF>=KS.sf_min?'ok':SF>=1.5?'warn':'fail');
 
     // KS compliance (reuse existing checker with totalL as representative L)
-    kenyaCheck({...p, L:totalL/spanCount}, maxDef, maxStress, maxMom, maxShr);
+      const spanSet = spanLengths.slice(0, spanCount);
+    kenyaCheck({...p, L: Math.max(...spanSet), Ldef: Math.min(...spanSet)}, maxDef, maxStress, maxMom, maxShr);
     updateCost();
 
     renderSpanSummary(result);
