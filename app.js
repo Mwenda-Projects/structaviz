@@ -978,119 +978,146 @@ function updateCost() {
   document.getElementById('cTotal').textContent = 'KES ' + total.toLocaleString('en-KE',{maximumFractionDigits:0});
 }
 
-// ─── MULTI-SPAN: THREE-MOMENT EQUATION SOLVER ────────────────────────────────
-// Handles UDL and point load per span.
-// Three-moment equation fixed-end term:
-//   UDL:        6A/L = w·L³/4
-//   Point load: 6A/L = P·a·(L²-a²) / (2L)  where a = distance from left support
-// Boundary: M[0]=0 (pin left), M[n]=0 (pin right).
-function spanFixedEndTerm(si, L) {
-  if (spanLoadTypes[si] === 'point') {
-    const P = spanLoads[si] * 1000; // kN → N
-    const a = spanLoadPos[si] * L;
-    return P * a * (L*L - a*a) / (2*L);
-  } else {
-    const w = spanLoads[si] * 1000; // kN/m → N/m
-    return w * L*L*L / 4;
-  }
+// ─── MULTI-SPAN: THREE-MOMENT SOLVER (pinned or fixed ends) ──────────────────
+// Sign convention: sagging +, hogging −. Units: N, N/m, m.
+let endFix = ['pin', 'pin']; // [left end, right end]: 'pin' or 'fixed'
+
+function spanLoadData(si, p) {
+  const L = spanLengths[si];
+  const isPoint = spanLoadTypes[si] === 'point';
+  return {
+    L,
+    w: (isPoint ? 0 : spanLoads[si] * 1000) + (p.sw || 0), // UDL + self-weight
+    P: isPoint ? spanLoads[si] * 1000 : 0,
+    a: spanLoadPos[si] * L
+  };
 }
 
-function solveThreeMoment(spans, loads, EI) {
-  const n = spans.length;
-  if (n === 1) return [0, 0];
-
-  if (n === 2) {
-    const L0=spans[0], L1=spans[1];
-    const f0=spanFixedEndTerm(0,L0), f1=spanFixedEndTerm(1,L1);
-    const rhs = -(f0 + f1);
-    const M1  = rhs / (2*(L0+L1));
-    return [0, M1, 0];
-  }
-
-  if (n === 3) {
-    const L0=spans[0], L1=spans[1], L2=spans[2];
-    const f0=spanFixedEndTerm(0,L0), f1=spanFixedEndTerm(1,L1), f2=spanFixedEndTerm(2,L2);
-    const a11=2*(L0+L1), a12=L1;
-    const a21=L1,         a22=2*(L1+L2);
-    const b1=-(f0+f1), b2=-(f1+f2);
-    const det=a11*a22-a12*a21;
-    const M1=(b1*a22-b2*a12)/det;
-    const M2=(a11*b2-a21*b1)/det;
-    return [0, M1, M2, 0];
-  }
+// 6·A·x̄/L for one span, with x̄ measured from its left end or its right end
+function spanTerms(s) {
+  const { L, w, P, a } = s, b = L - a;
+  const udl = w * L * L * L / 4;
+  return {
+    left:  udl + P * a * b * (L + a) / L,
+    right: udl + P * a * b * (L + b) / L
+  };
 }
 
-// Compute BMD, SFD, deflection arrays for a multi-span beam
-// Returns { xs, moms, shrs, defs, totalL, supportXs }
-function solveMultiSpan(p) {
-  const spans  = spanLengths.slice(0, spanCount);
-  const loads  = spanLoads.slice(0, spanCount).map(v => v * 1000); // kN/m → N/m
-  const EI     = p.E * p.sec.I;
-  const Ms     = solveThreeMoment(spans, loads, EI); // support moments
-  const totalL = spans.reduce((a,b)=>a+b, 0);
-  const N_PER  = 100; // points per span
-
-  const xs=[], moms=[], shrs=[], defs=[];
-  let xOffset = 0;
-  const supportXs = [0];
-
-  spans.forEach((L, si) => {
-    const isPoint = spanLoadTypes[si] === 'point';
-    const ML = Ms[si], MR = Ms[si+1];
-
-    let RL;
-    if (isPoint) {
-      const P = spanLoads[si] * 1000;
-      const a = spanLoadPos[si] * L;
-      const b = L - a;
-      // Reactions from three-moment solution + point load equilibrium
-      RL = (P*b/L) + (ML - MR)/L;
-    } else {
-      const w = loads[si];
-      RL = w*L/2 + (ML - MR)/L;
+function solveLinear(A, b) {
+  const n = b.length;
+  for (let i = 0; i < n; i++) {
+    let piv = i;
+    for (let k = i + 1; k < n; k++) if (Math.abs(A[k][i]) > Math.abs(A[piv][i])) piv = k;
+    [A[i], A[piv]] = [A[piv], A[i]]; [b[i], b[piv]] = [b[piv], b[i]];
+    for (let k = i + 1; k < n; k++) {
+      const f = A[k][i] / A[i][i];
+      for (let j = i; j < n; j++) A[k][j] -= f * A[i][j];
+      b[k] -= f * b[i];
     }
+  }
+  const x = Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = b[i];
+    for (let j = i + 1; j < n; j++) s -= A[i][j] * x[j];
+    x[i] = s / A[i][i];
+  }
+  return x;
+}
+
+function solveThreeMoment(sd) {
+  const n = sd.length, m = n + 1;
+  const A = Array.from({ length: m }, () => Array(m).fill(0));
+  const c = Array(m).fill(0);
+  const t = sd.map(spanTerms);
+
+  if (endFix[0] === 'fixed') { A[0][0] = 2 * sd[0].L; A[0][1] = sd[0].L; c[0] = -t[0].right; }
+  else A[0][0] = 1;
+
+  for (let i = 1; i < n; i++) {
+    const L1 = sd[i - 1].L, L2 = sd[i].L;
+    A[i][i - 1] = L1; A[i][i] = 2 * (L1 + L2); A[i][i + 1] = L2;
+    c[i] = -(t[i - 1].left + t[i].right);
+  }
+
+  const Ln = sd[n - 1].L;
+  if (endFix[1] === 'fixed') { A[n][n - 1] = Ln; A[n][n] = 2 * Ln; c[n] = -t[n - 1].left; }
+  else A[n][n] = 1;
+
+  return solveLinear(A, c);
+}
+
+// Returns { xs, moms, shrs, defs, totalL, supportXs, Ms, R }
+function solveMultiSpan(p) {
+  const n = spanCount;
+  const sd = Array.from({ length: n }, (_, i) => spanLoadData(i, p));
+  const Ms = solveThreeMoment(sd);
+  const EI = p.E * p.sec.I;
+  const N_PER = 100;
+  const xs = [], moms = [], shrs = [], defs = [], supportXs = [0];
+  const R = Array(n + 1).fill(0);
+  let xOff = 0;
+
+  sd.forEach(({ L, w, P, a }, si) => {
+    const b = L - a, ML = Ms[si], MR = Ms[si + 1];
+    const RL = (MR - ML) / L + P * b / L + w * L / 2;
+    const RR = P + w * L - RL;
+    R[si] += RL; R[si + 1] += RR;
+    const C1 = -(ML * L * L / 2 + RL * L * L * L / 6 - w * L * L * L * L / 24 - P * b * b * b / 6) / L;
 
     for (let i = 0; i <= N_PER; i++) {
-      const x  = L * i / N_PER;
-      const xG = xOffset + x;
-      xs.push(xG);
-
-      let m, v, d;
-      if (isPoint) {
-        const P = spanLoads[si] * 1000;
-        const a = spanLoadPos[si] * L;
-        // BMD: M(x) = ML + RL*x - P*(x-a) for x>a
-        m = ML + RL*x - (x > a ? P*(x-a) : 0);
-        // SFD: V(x) = RL for x<a, RL-P for x>a
-        v = x < a ? RL : RL - P;
-        // Deflection by double integration:
-        // For x ≤ a: y = (1/EI)[ML*x²/2 + RL*x³/6 + C1*x]
-        // For x > a: y = (1/EI)[ML*x²/2 + RL*x³/6 - P*(x-a)³/6 + C1*x]
-        // BC y(L)=0 gives C1:
-        const C1 = -(ML*L/2 + RL*L*L/6 - P*(L-a)*(L-a)*(L-a)/6) / L * L
-                   / L * 1; // simplify:
-        const C1clean = -(ML*L/2 + RL*L*L/6 - P*(L-a)**3/6);
-        d = (ML*x*x/2 + RL*x*x*x/6 - (x > a ? P*(x-a)**3/6 : 0) + C1clean*x) / EI;
-        m = ML + RL*x - (x > a ? P*(x-a) : 0);
-        v = x < a ? RL : RL - P;
-      } else {
-        const w = loads[si];
-        m = ML + RL*x - w*x*x/2;
-        v = RL - w*x;
-        const C1 = -(ML*L/2 + RL*L*L/6 - w*L*L*L/24);
-        d = (ML*x*x/2 + RL*x*x*x/6 - w*x*x*x*x/24 + C1*x) / EI;
-      }
-
-      moms.push(m);
-      shrs.push(v);
-      defs.push(d);
+      const x = L * i / N_PER;
+      const pastP = P > 0 && x > a;
+      xs.push(xOff + x);
+      moms.push(ML + RL * x - w * x * x / 2 - (pastP ? P * (x - a) : 0));
+      shrs.push(RL - w * x - (pastP ? P : 0));
+      defs.push((ML * x * x / 2 + RL * x * x * x / 6 - w * x * x * x * x / 24
+                 - (pastP ? P * Math.pow(x - a, 3) / 6 : 0) + C1 * x) / EI);
     }
-    xOffset += L;
-    supportXs.push(xOffset);
+    xOff += L; supportXs.push(xOff);
   });
 
-  return { xs, moms, shrs, defs, totalL, supportXs, Ms };
+  return { xs, moms, shrs, defs, totalL: xOff, supportXs, Ms, R };
 }
+
+// ─── MULTI-SPAN: SUPPORT RESULTS CARD ────────────────────────────────────────
+function renderSpanSummary(result) {
+  const cr = document.getElementById('codeResults');
+  if (!cr) return;
+  let card = document.getElementById('spanSummary');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'spanSummary';
+    card.className = 'ms-card';
+    cr.parentNode.insertBefore(card, cr);
+  }
+  const rows = result.R.map((r, i) => {
+    const m = result.Ms[i];
+    const mTxt = Math.abs(m) < 1e-6 ? '—' : (m / 1000).toFixed(1);
+    return `<tr><td>${String.fromCharCode(65 + i)}</td><td>${(r / 1000).toFixed(1)}</td>` +
+           `<td class="${m < -1e-6 ? 'hog' : ''}">${mTxt}</td></tr>`;
+  }).join('');
+  card.innerHTML =
+    `<div class="ms-card-title">Support results</div>` +
+    `<table class="ms-table"><thead><tr><th>Support</th><th>Reaction (kN)</th><th>Moment (kN·m)</th></tr></thead>` +
+    `<tbody>${rows}</tbody></table>` +
+    `<div class="ms-note">Hogging moments are negative.</div>`;
+  card.style.display = '';
+}
+function hideSpanSummary() {
+  const c = document.getElementById('spanSummary');
+  if (c) c.style.display = 'none';
+}
+
+// ─── MULTI-SPAN: END SUPPORT TOGGLE ──────────────────────────────────────────
+function endSupportControlHTML() {
+  const seg = (side, label) =>
+    `<div class="ms-seg-row"><span class="ms-seg-label">${label}</span><div class="ms-seg">` +
+    `<button type="button" class="${endFix[side] === 'pin' ? 'on' : ''}" onclick="setEndFix(${side},'pin')">Pinned</button>` +
+    `<button type="button" class="${endFix[side] === 'fixed' ? 'on' : ''}" onclick="setEndFix(${side},'fixed')">Fixed</button>` +
+    `</div></div>`;
+  return `<div class="ms-ends"><div class="sec-label">End supports</div>${seg(0, 'Left end')}${seg(1, 'Right end')}</div>`;
+}
+function setEndFix(side, type) { endFix[side] = type; buildSpanControls(); go(); }
 
 // Draw the multi-span 2D diagram
 function draw2dMultiSpan(result, p) {
