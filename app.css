@@ -535,3 +535,27 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
 .code-results{display:flex;flex-direction:column;gap:10px;margin-top:0 !important}
 .code-results .code-item{margin:0 !important}
 .ms-card{margin-bottom:10px !important}
+
+/* ── Mobile polish ── */
+@media (max-width:768px){
+  /* One consistent gap between every block */
+  .main{gap:10px}
+  .metrics{gap:10px}
+
+  /* Tabs: 2×2 grid, everything visible, nothing to scroll or fade */
+  .tabs{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;
+    overflow:visible;padding-right:0;
+    -webkit-mask-image:none;mask-image:none;
+  }
+  .tab{
+    display:flex;align-items:center;justify-content:center;
+    padding:10px 8px;font-size:12px;text-align:center;
+  }
+
+  /* Diagram title stays on one line */
+  .panel-label{letter-spacing:1.5px;font-size:8px}
+
+  /* Roomier status bar */
+  .mobile-status-bar{padding:10px 12px}
+}
