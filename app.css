@@ -293,7 +293,7 @@ canvas{display:block;width:100%;}
 .stamp{
   display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:6px;
   font-size:11px;font-family:var(--mono);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
-  border:1.5px solid;transform:rotate(-0.5deg);
+  border:1.5px solid;
 }
 .stamp.ok{background:rgba(0,200,150,.07);border-color:rgba(0,200,150,.35);color:var(--accent);box-shadow:0 0 0 3px rgba(0,200,150,.05);}
 .stamp.fail{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.35);color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.05);}
@@ -306,7 +306,7 @@ canvas{display:block;width:100%;}
   0%   { transform: rotate(-5deg) scale(1.24); opacity:.55; }
   55%  { transform: rotate(0.6deg) scale(0.93); opacity:1; }
   78%  { transform: rotate(-1.3deg) scale(1.035); }
-  100% { transform: rotate(-0.5deg) scale(1); }
+  100% { transform: rotate(0deg) scale(1); }
 }
 .stamp.stamp-impact{ animation: stampImpact 420ms var(--ease); }
 .mobile-status-bar.stamp-impact{ animation: stampImpact 420ms var(--ease); }
