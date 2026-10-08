@@ -531,6 +531,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
 .check-row input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
 
 /* Compliance panel: one consistent 10px rhythm */
-.ms-card{margin-bottom:10px}
-.code-results{display:flex;flex-direction:column;gap:10px}
-.code-results .code-item{margin:0}
+#stamp{margin-bottom:10px !important}
+.code-results{display:flex;flex-direction:column;gap:10px;margin-top:0 !important}
+.code-results .code-item{margin:0 !important}
+.ms-card{margin-bottom:10px !important}
