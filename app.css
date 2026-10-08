@@ -559,3 +559,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   /* Roomier status bar */
   .mobile-status-bar{padding:10px 12px}
 }
+
+/* Mobile: even spacing between status bar, metrics, tabs and diagram */
+@media (max-width:768px){
+  #beamMain{display:flex;flex-direction:column;gap:10px}
+  .review-zone{margin-top:0}
+}
