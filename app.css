@@ -565,3 +565,13 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   #beamMain{display:flex;flex-direction:column;gap:10px}
   .review-zone{margin-top:0}
 }
+/* Slab: use the empty space, drop the lone tab, even rhythm */
+#slabMain > .tabs{display:none}
+@media (min-width:1200px){
+  #slabMain{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:start}
+  #slabMain > .metrics,#slabMain > #slabStamp{grid-column:1 / -1}
+  .panel-slab-plan{max-width:none;margin:0}
+}
+@media (max-width:768px){
+  #slabMain{gap:10px}
+}

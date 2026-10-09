@@ -2461,7 +2461,11 @@ function drawSlabPlan(p, Msx, Msy) {
   ctx.textAlign = 'center';
   ctx.font = '11px monospace';
   ctx.strokeStyle = accent;
-  ctx.beginPath(); ctx.moveTo(rx + rw * 0.3, ry + 10); ctx.lineTo(rx + rw * 0.3, ry + rh - 10); ctx.stroke();
+  const mxX = rx + rw * 0.3, mxY = ry + rh / 2 - 10;
+  ctx.beginPath();
+  ctx.moveTo(mxX, ry + 10); ctx.lineTo(mxX, mxY - 14);
+  ctx.moveTo(mxX, mxY + 8);  ctx.lineTo(mxX, ry + rh - 10);
+  ctx.stroke();
   ctx.fillStyle = accent;
   ctx.fillText(`Msx = ${Msx.toFixed(2)} kN·m/m`, rx + rw * 0.3, ry + rh / 2 - 10);
 
