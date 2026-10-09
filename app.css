@@ -575,3 +575,22 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
 @media (max-width:768px){
   #slabMain{gap:10px}
 }
+/* Mobile: frosted-glass controls sheet + peek while dragging a slider */
+@media (max-width:768px){
+  .sidebar{
+    max-height:72vh;
+    background:color-mix(in srgb, var(--s1) 62%, transparent);
+    -webkit-backdrop-filter:blur(18px) saturate(1.4);
+    backdrop-filter:blur(18px) saturate(1.4);
+    transition:transform .35s cubic-bezier(.32,.72,0,1), opacity .18s ease;
+  }
+  .sheet-handle{background:transparent}
+  .sidebar .sec{background:color-mix(in srgb, var(--s2) 55%, transparent)}
+
+  /* Finger on a slider: sheet fades so the live diagram shows through */
+  .sidebar.peeking{
+    opacity:.22;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+}

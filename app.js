@@ -2553,3 +2553,17 @@ buildSectionGrid();
 populateStdSections();
 renderSaves();
 go();
+// ─── MOBILE: PEEK WHILE DRAGGING A SLIDER ────────────────────────────────────
+// While a finger is on any slider in the controls sheet, fade the sheet so the
+// live diagram behind it is visible. It returns the moment the finger lifts.
+(function enablePeek() {
+  const sb = document.getElementById('sidebar');
+  if (!sb) return;
+  const isMobile = () => window.matchMedia('(max-width:768px)').matches;
+  sb.addEventListener('pointerdown', e => {
+    if (isMobile() && e.target && e.target.type === 'range') sb.classList.add('peeking');
+  });
+  const stop = () => sb.classList.remove('peeking');
+  window.addEventListener('pointerup', stop);
+  window.addEventListener('pointercancel', stop);
+})();
