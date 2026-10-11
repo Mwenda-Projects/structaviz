@@ -625,3 +625,25 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   }
   .sidebar.open .sheet-handle-label::after{transform:rotate(225deg);margin-top:-3px}
 }
+/* Mobile sheet header: two clean buttons only, "Edit design" / "Done", pinned on top */
+@media (max-width:768px){
+  .sheet-handle-bar{display:none}
+  .sheet-handle{
+    flex-direction:row;justify-content:center;align-items:center;
+    height:50px;padding:0 16px;margin:0 -16px;gap:0;
+    background:color-mix(in srgb, var(--s1) 94%, transparent);
+    -webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);
+  }
+  .sheet-handle-label{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:140px;padding:9px 28px;border-radius:999px;
+    background:var(--brand);color:#071522;
+    font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.3px;text-transform:none;
+    box-shadow:0 2px 10px rgba(79,168,255,.3);
+    transition:transform .15s;
+  }
+  .sheet-handle-label::after{display:none}
+  .sheet-handle:active .sheet-handle-label{transform:scale(.97)}
+}
