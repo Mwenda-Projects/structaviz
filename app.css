@@ -647,3 +647,36 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   .sheet-handle-label::after{display:none}
   .sheet-handle:active .sheet-handle-label{transform:scale(.97)}
 }
+/* Mobile sheet header: breathing room + light-mode outline button */
+@media (max-width:768px){
+  /* Taller header: pill is 40px, so 14px of space above and below */
+  .sheet-handle{height:68px}
+  .sheet-handle-label{height:40px;padding:0 30px;min-width:150px}
+
+  /* Closed sheet shows the full 68px header, so nothing gets clipped */
+  .sidebar{transform:translateY(calc(100% - 68px))}
+  .sidebar.open{transform:translateY(0)}
+
+  /* Keep the last page content clear of the closed sheet */
+  .main{padding-bottom:96px}
+
+  /* Light theme chosen in the selector: plain dark words, blue outline */
+  [data-theme="light"] .sheet-handle-label{
+    background:transparent;color:var(--text);
+    border:1.5px solid var(--brand);box-shadow:none;
+  }
+  [data-theme="light"] .sheet-handle:active .sheet-handle-label{
+    background:rgba(29,111,196,.08);
+  }
+}
+
+/* Same light style when the theme is set to "Device" and the phone is in light mode */
+@media (max-width:768px) and (prefers-color-scheme: light){
+  :root:not([data-theme]) .sheet-handle-label{
+    background:transparent;color:var(--text);
+    border:1.5px solid var(--brand);box-shadow:none;
+  }
+  :root:not([data-theme]) .sheet-handle:active .sheet-handle-label{
+    background:rgba(29,111,196,.08);
+  }
+}
