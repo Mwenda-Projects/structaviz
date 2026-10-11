@@ -712,3 +712,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
     color:var(--text);font-size:15px;font-weight:700;letter-spacing:.2px;
   }
 }
+/* Sidebar: even spacing between all cards (beam and slab), desktop and phone */
+#beamSidebar,#slabSidebar{display:flex;flex-direction:column;gap:14px}
+@media (max-width:768px){
+  #beamSidebar,#slabSidebar{gap:12px}
+}
