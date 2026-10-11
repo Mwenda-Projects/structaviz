@@ -2554,16 +2554,23 @@ populateStdSections();
 renderSaves();
 go();
 // ─── MOBILE: PEEK WHILE DRAGGING A SLIDER ────────────────────────────────────
-// While a finger is on any slider in the controls sheet, fade the sheet so the
-// live diagram behind it is visible. It returns the moment the finger lifts.
+// While a finger is on a slider, hide the rest of the controls sheet so the live
+// diagram is fully visible. Only the slider being dragged stays on screen.
 (function enablePeek() {
   const sb = document.getElementById('sidebar');
   if (!sb) return;
   const isMobile = () => window.matchMedia('(max-width:768px)').matches;
   sb.addEventListener('pointerdown', e => {
-    if (isMobile() && e.target && e.target.type === 'range') sb.classList.add('peeking');
+    if (!isMobile() || !e.target || e.target.type !== 'range') return;
+    const ctrl = e.target.closest('.ctrl');
+    if (ctrl) ctrl.classList.add('holding');
+    sb.classList.add('peeking');
   });
-  const stop = () => sb.classList.remove('peeking');
+  const stop = () => {
+    sb.classList.remove('peeking');
+    sb.querySelectorAll('.holding').forEach(el => el.classList.remove('holding'));
+  };
   window.addEventListener('pointerup', stop);
   window.addEventListener('pointercancel', stop);
+  window.addEventListener('blur', stop);
 })();
