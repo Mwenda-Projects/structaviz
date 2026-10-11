@@ -611,3 +611,17 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
     backdrop-filter:blur(12px);
   }
 }
+/* Mobile sheet handle: readable label with a chevron that follows the sheet state */
+@media (max-width:768px){
+  .sheet-handle-label{
+    display:flex;align-items:center;gap:8px;
+    font-family:var(--sans);font-size:13px;font-weight:600;
+    letter-spacing:.3px;text-transform:none;color:var(--text);
+  }
+  .sheet-handle-label::after{
+    content:'';width:7px;height:7px;margin-top:3px;
+    border-top:2px solid var(--brand);border-left:2px solid var(--brand);
+    transform:rotate(45deg);transition:transform .3s, margin .3s;
+  }
+  .sidebar.open .sheet-handle-label::after{transform:rotate(225deg);margin-top:-3px}
+}

@@ -1649,7 +1649,7 @@ function toggleSheet(){
   const sidebar=document.getElementById('sidebar');
   const label=document.getElementById('sheetLabel');
   const isOpen=sidebar.classList.toggle('open');
-  label.textContent='Controls';
+  label.textContent = isOpen ? 'Done' : 'Edit design';
 }
 
 // Close sheet when a tab is clicked on mobile
@@ -1658,7 +1658,7 @@ document.querySelectorAll('.tab').forEach(t=>{
     const sidebar=document.getElementById('sidebar');
     if(sidebar.classList.contains('open')){
       sidebar.classList.remove('open');
-      document.getElementById('sheetLabel').textContent='Controls';
+      document.getElementById('sheetLabel').textContent='Edit design';
     }
   });
 });
