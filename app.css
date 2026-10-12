@@ -717,3 +717,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
 @media (max-width:768px){
   #beamSidebar,#slabSidebar{gap:12px}
 }
+/* Mobile: scrolling the controls never drags the page behind them */
+@media (max-width:768px){
+  .sidebar{overscroll-behavior:contain}
+}
