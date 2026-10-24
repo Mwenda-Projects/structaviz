@@ -7,7 +7,6 @@
 <style>
 *{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:1000px;margin:0 auto}
 :root{--bg:#090c11;--card:#10141c;--tx:#e2e8f0;--mut:#8a99b2;--bd:rgba(150,180,220,.16);--ac:#4fa8ff;--ok:#00c896;--c1:#4fa8ff;--c2:#f97316;--c3:#a78bfa;--on-ac:#071522;color-scheme:dark}
 :root:root:root{--teal:#14b8a6;--red:#ef4444}
 :root:root:root[data-theme="light"]{--teal:#0f766e;--red:#b91c1c}
@@ -20,7 +19,8 @@ p.sub{color:var(--mut);margin:0 0 16px;font-size:14px}
 .count{font-size:12px;color:var(--mut);margin:0 0 10px}
 .tools{display:grid;grid-template-columns:1fr;gap:12px}
 @media (min-width:640px){.tools{grid-template-columns:1fr 1fr}}
-@media (min-width:1000px){.tools{grid-template-columns:1fr 1fr 1fr}}
+@media (min-width:900px){.tools{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:1180px){.tools{grid-template-columns:repeat(4,1fr)}}
 a.tool{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);text-decoration:none;transition:border-color .18s,transform .18s,box-shadow .18s}
 a.tool:hover{border-color:var(--ac);transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.18)}
 a.tool:active{transform:scale(.99)}
@@ -33,12 +33,17 @@ a.tool p{margin:0;color:var(--mut);font-size:14px;line-height:1.5}
 .tags{display:flex;flex-wrap:wrap;gap:5px}
 .tags span{font-size:12px;border:1px solid var(--bd);border-radius:99px;padding:2px 9px;color:var(--mut)}
 .open{margin-top:auto;font:700 11px var(--svz-mono,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--ac)}
+.more{grid-column:1/-1;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:16px;border:1px dashed var(--bd);border-radius:14px;color:var(--tx);text-decoration:none}
+.more strong{font:600 16px var(--svz-sans,inherit)}.more span{color:var(--mut);font-size:14px}.more em{font:700 11px var(--svz-mono,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--ac);font-style:normal;margin-top:4px}
+.more:hover{border-color:var(--ac)}
+@media (min-width:640px){.more{grid-column:span 2}}
+@media (min-width:640px) and (max-width:899px){.more{grid-column:1/-1}}
 .empty{color:var(--mut);padding:28px 0;text-align:center}
 .foot{font-size:12px;color:var(--mut);margin-top:22px;max-width:72ch;line-height:1.55}
 @media (prefers-reduced-motion:reduce){a.tool{transition:none}a.tool:hover{transform:none}}
 </style>
-<link rel="stylesheet" href="structaviz-tools.css">
-<script src="structaviz-tools.js"></script>
+<link rel="stylesheet" href="tools/structaviz-tools.css">
+<script src="tools/structaviz-tools.js"></script>
 </head>
 <body>
 <main>
@@ -54,16 +59,16 @@ a.tool p{margin:0;color:var(--mut);font-size:14px;line-height:1.5}
 <script>
 const $=id=>document.getElementById(id);
 const TOOLS=[
- {n:"Concrete Toolkit",b:"CON",k:"green",c:"Structures",u:"concrete-toolkit.html",d:"Mix design to ACI 211, site quantities from nominal mixes, and cube result compliance.",t:["Mix design","Quantities","Cube check"]},
- {n:"Steel and Timber Member Checks",b:"STL",k:"blue",c:"Structures",u:"Steel%20and%20Timber%20Member%20Checks.html",d:"Eurocode-style resistance checks for steel beams, steel columns and timber beams, plus section properties.",t:["Steel beam","Steel column","Timber beam","Section properties"]},
- {n:"Soil Mechanics Toolkit",b:"SOIL",k:"orange",c:"Geotechnical",u:"soil%20toolkit.html",d:"Foundation and ground calculations with the working shown so you can cross-check by hand.",t:["Bearing capacity","Settlement","Mohr circle","Earth pressure","Index properties"]},
- {n:"Retaining Wall Stability",b:"RW",k:"purple",c:"Geotechnical",u:"Retaining%20Wall%20Stability.html",d:"Cantilever wall per metre run: Rankine active pressure, overturning, sliding and base bearing pressure.",t:["Overturning","Sliding","Bearing pressure"]},
- {n:"Hydrology and Drainage",b:"HYD",k:"teal",c:"Water",u:"hydro%20toolkit.html",d:"From design storm to pipe, channel and culvert sizing.",t:["Rational method","Pipe sizing","Open channel","Culvert"]},
- {n:"Survey Pro",b:"SRV",k:"green",c:"Survey and roads",u:"survey%20pro.html",d:"Traverse adjustment, levelling reduction, curve setting out and coordinate geometry.",t:["Traverse","Levelling","Curves","Join and polar"]},
- {n:"Highway Geometry",b:"HWY",k:"blue",c:"Survey and roads",u:"highway%20toolkit.html",d:"Road alignment checks for stopping sight distance, horizontal curves with spirals, and vertical curves.",t:["Sight distance","Superelevation","Spiral","Vertical curves"]},
- {n:"Earthworks and Quantities",b:"EW",k:"orange",c:"Construction",u:"earthworks-toolkit.html",d:"Cut and fill volumes, mass haul, trench quantities and a bill of quantities.",t:["Section volumes","Mass haul","Trench","BoQ"]},
- {n:"Project Scheduler",b:"CPM",k:"purple",c:"Construction",u:"scheduler.html",d:"Critical path method with float, optional PERT probability and a Gantt chart.",t:["CPM","Float","PERT","Gantt"]},
- {n:"Civil Unit Converter",b:"UNIT",k:"red",c:"Utilities",u:"Civil%20Unit%20Converter.html",d:"Site and design units, plus a slope converter and a reinforcement mass helper.",t:["10 unit types","Slope","Rebar mass"]}];
+ {n:"Concrete Toolkit",b:"CON",k:"green",c:"Structures",u:"tools/concrete.html",d:"Mix design to ACI 211, site quantities from nominal mixes, and cube result compliance.",t:["Mix design","Quantities","Cube check"]},
+ {n:"Steel and Timber Member Checks",b:"STL",k:"blue",c:"Structures",u:"tools/member-checks.html",d:"Eurocode-style resistance checks for steel beams, steel columns and timber beams, plus section properties.",t:["Steel beam","Steel column","Timber beam","Section properties"]},
+ {n:"Soil Mechanics Toolkit",b:"SOIL",k:"orange",c:"Geotechnical",u:"tools/soil.html",d:"Foundation and ground calculations with the working shown so you can cross-check by hand.",t:["Bearing capacity","Settlement","Mohr circle","Earth pressure","Index properties"]},
+ {n:"Retaining Wall Stability",b:"RW",k:"purple",c:"Geotechnical",u:"tools/retaining-wall.html",d:"Cantilever wall per metre run: Rankine active pressure, overturning, sliding and base bearing pressure.",t:["Overturning","Sliding","Bearing pressure"]},
+ {n:"Hydrology and Drainage",b:"HYD",k:"teal",c:"Water",u:"tools/hydrology.html",d:"From design storm to pipe, channel and culvert sizing.",t:["Rational method","Pipe sizing","Open channel","Culvert"]},
+ {n:"Survey Pro",b:"SRV",k:"green",c:"Survey and roads",u:"tools/survey.html",d:"Traverse adjustment, levelling reduction, curve setting out and coordinate geometry.",t:["Traverse","Levelling","Curves","Join and polar"]},
+ {n:"Highway Geometry",b:"HWY",k:"blue",c:"Survey and roads",u:"tools/highway.html",d:"Road alignment checks for stopping sight distance, horizontal curves with spirals, and vertical curves.",t:["Sight distance","Superelevation","Spiral","Vertical curves"]},
+ {n:"Earthworks and Quantities",b:"EW",k:"orange",c:"Construction",u:"tools/earthworks.html",d:"Cut and fill volumes, mass haul, trench quantities and a bill of quantities.",t:["Section volumes","Mass haul","Trench","BoQ"]},
+ {n:"Project Scheduler",b:"CPM",k:"purple",c:"Construction",u:"tools/scheduler.html",d:"Critical path method with float, optional PERT probability and a Gantt chart.",t:["CPM","Float","PERT","Gantt"]},
+ {n:"Civil Unit Converter",b:"UNIT",k:"red",c:"Utilities",u:"tools/unit-converter.html",d:"Site and design units, plus a slope converter and a reinforcement mass helper.",t:["10 unit types","Slope","Rebar mass"]}];
 const CATS=["All"].concat([...new Set(TOOLS.map(t=>t.c))]);let cat="All";
 function draw(){
   const s=$("q").value.trim().toLowerCase();
@@ -71,6 +76,7 @@ function draw(){
   const L=TOOLS.filter(t=>(cat=="All"||t.c==cat)&&(!s||(t.n+" "+t.d+" "+t.t.join(" ")+" "+t.c).toLowerCase().includes(s)));
   $("list").innerHTML=L.map(t=>`<a class="tool" href="${t.u}"><div class="top"><span class="tb ${t.k}" aria-hidden="true">${t.b}</span><div><h2>${t.n}</h2><div class="cat">${t.c}</div></div></div><p>${t.d}</p><div class="tags">${t.t.map(x=>`<span>${x}</span>`).join("")}</div><span class="open">Open tool \u2192</span></a>`).join("");
   $("none").hidden=L.length>0;
+  if(cat=="All"&&!s)$("list").insertAdjacentHTML("beforeend",`<a class="more" href="mailto:mwendantony28@gmail.com?subject=StructaViz%20tool%20suggestion"><strong>Need another calculator?</strong><span>Tell us what you work on and what is missing.</span><em>Send a suggestion \u2192</em></a>`);
   $("count").textContent=L.length==TOOLS.length?TOOLS.length+" tools":"Showing "+L.length+" of "+TOOLS.length+" tools";
 }
 $("q").addEventListener("input",draw);
