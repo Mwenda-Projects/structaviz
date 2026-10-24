@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Retaining Wall Stability</title>
+<style>
+:root{--bg:#f5f4f2;--card:#fff;--tx:#1f1e1d;--mut:#6b6966;--bd:#dedbd7;--ac:#7a4a2a;--ok:#1f7a4d;--bad:#b3261e;--c1:#2563a8;--c2:#b8470f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161514;--card:#201f1d;--tx:#f0eeeb;--mut:#a29f9a;--bd:#393733;--ac:#d9a074;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161514;--card:#201f1d;--tx:#f0eeeb;--mut:#a29f9a;--bd:#393733;--ac:#d9a074;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:700px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+p.sub{color:var(--mut);margin:0 0 12px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select{width:100%;font:inherit;padding:9px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx)}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.r{border:1px solid var(--bd);border-radius:10px;padding:8px 10px}
+.r b{display:block;font-size:17px}.r span{font-size:12px;color:var(--mut)}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor;margin-right:4px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:380px;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:600}
+tr.tot td{font-weight:700}
+svg{width:100%;height:auto;display:block}
+.note{font-size:12px;color:var(--mut);margin-top:6px}.mt{margin-top:10px}
+</style>
+<link rel="stylesheet" href="structaviz-tools.css">
+<script src="structaviz-tools.js"></script>
+</head>
+<body>
+<main>
+<h1>Retaining Wall Stability</h1>
+<p class="sub">Cantilever wall per metre run. Rankine active pressure, overturning, sliding and base bearing pressure. Units: m, kN, kPa, kN/m³.</p>
+<div class="card" id="g1"></div><div class="card" id="g2"></div>
+<div class="card"><h2>Results</h2><div class="res" id="res"></div><div id="chk" class="mt"></div></div>
+<div class="card"><h2>Section</h2><div id="plot"></div></div>
+<div class="card"><h2>Forces and moments about the toe</h2><div class="sc" id="tbl"></div><div class="note">Active pressure acts on a vertical plane through the heel. Water in the backfill and tension cracks are not modelled, so provide drainage and check pore pressure separately. Soil cohesion is ignored.</div></div>
+</main>
+<script>
+const $=id=>document.getElementById(id),g=id=>parseFloat($(id).value),rad=Math.PI/180,
+f=(x,n=2)=>(Math.abs(x)<5*Math.pow(10,-n-1)?0:x).toFixed(n),
+cards=a=>a.map(r=>`<div class="r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join(""),
+bd=(ok,a,b)=>`<span class="badge ${ok?"ok":"bad"}">${ok?a:b}</span>`,
+msg=t=>`<div class="r" style="grid-column:1/3"><span>Check your inputs</span><b>${t}</b></div>`,
+F=(id,l,v)=>`<div><label>${l}</label><input id="${id}" type="number" step="any" value="${v}"></div>`;
+$("g1").innerHTML=`<h2>Wall geometry</h2><div class="grid">${F("wH","Stem height H (m)",4)}${F("wT1","Stem thickness at top (m)",0.3)}${F("wT2","Stem thickness at base (m)",0.45)}${F("wB","Base width B (m)",3)}${F("wLt","Toe length (m)",0.8)}${F("wTb","Base thickness (m)",0.45)}${F("wGc","Concrete unit weight (kN/m³)",24)}</div>
+<div class="note">The back of the stem is vertical, and any taper is on the front face.</div>`;
+$("g2").innerHTML=`<h2>Soil and loading</h2><div class="grid">${F("wG","Backfill unit weight (kN/m³)",18)}${F("wP","Backfill φ (°)",30)}${F("wBe","Backfill slope β (°)",0)}${F("wQ","Surcharge q (kPa)",10)}
+${F("wPf","Foundation soil φ (°)",30)}${F("wDl","Base friction angle δ (°)",20)}${F("wCa","Base adhesion (kPa)",0)}${F("wDf","Toe embedment Df (m)",0.6)}
+<div><label>Passive resistance at toe</label><select id="wPs"><option value="0">Ignore</option><option value="1">Include 50%</option></select></div>${F("wQa","Allowable bearing pressure (kPa)",200)}${F("wFo","Required FS overturning",2)}${F("wFs","Required FS sliding",1.5)}</div>`;
+function rw(){
+  const H=g("wH"),t1=g("wT1"),t2=g("wT2"),B=g("wB"),Lt=g("wLt"),tb=g("wTb"),gc=g("wGc"),gs=g("wG"),ph=g("wP")*rad,be=(g("wBe")||0)*rad,q=g("wQ")||0,pf=g("wPf")*rad,dl=g("wDl")*rad,ca=g("wCa")||0,Df=g("wDf")||0,pas=+$("wPs").value,qa=g("wQa"),Fo=g("wFo"),Fs=g("wFs"),
+    bad=t=>{["res","chk","plot","tbl"].forEach(i=>$(i).innerHTML="");$("res").innerHTML=msg(t)};
+  if(![H,t1,t2,B,Lt,tb,gc,gs,ph,pf,dl,qa].every(x=>x>0)||t2<t1||B<=Lt+t2||be<0||be>=ph||q<0||Df<0)return bad("All dimensions positive, base wider than toe plus stem, base thickness above 0, and β smaller than φ.");
+  const Bh=B-Lt-t2,Ht=H+tb,cb=Math.cos(be),kk=Math.sqrt(cb*cb-Math.pow(Math.cos(ph),2)),Ka=cb*(cb-kk)/(cb+kk),Kp=Math.pow(Math.tan(Math.PI/4+pf/2),2),
+    Pa=.5*Ka*gs*Ht*Ht,Pah=Pa*cb,Pav=Pa*Math.sin(be),Paq=Ka*q*Ht,w=t2-t1,
+    Vs=[["Stem rectangle",t1*H*gc,Lt+w+t1/2],["Stem taper",w*H/2*gc,Lt+2*w/3],["Base slab",B*tb*gc,B/2],["Soil on heel",gs*Bh*H,Lt+t2+Bh/2],["Sloping soil on heel",.5*Bh*Bh*Math.tan(be)*gs,Lt+t2+2*Bh/3],["Surcharge on heel",q*Bh,Lt+t2+Bh/2],["Vertical thrust component",Pav,B]].filter(r=>r[1]>1e-9),
+    SV=Vs.reduce((s,r)=>s+r[1],0),Mr=Vs.reduce((s,r)=>s+r[1]*r[2],0),Mo=Pah*Ht/3+Paq*Ht/2,SH=Pah+Paq,Pp=pas?.5*.5*Kp*gs*Df*Df:0,Mp=Pp*Df/3,
+    FSo=(Mr+Mp)/Mo,Fr=SV*Math.tan(dl)+ca*B+Pp,FSs=Fr/SH,xb=(Mr-Mo)/SV,e=B/2-xb,mid=Math.abs(e)<=B/6+1e-9;
+  let qmx,qmn;if(xb<=0){return bad("The resultant falls outside the base. The wall is unstable as drawn.")}
+  if(mid){qmx=SV/B*(1+6*e/B);qmn=SV/B*(1-6*e/B)}else{qmx=2*SV/(3*xb);qmn=0}
+  $("res").innerHTML=cards([["Active coefficient Ka",f(Ka,3)],["Horizontal thrust (soil + surcharge)",f(SH,1)+" kN/m"],["Total vertical load",f(SV,1)+" kN/m"],["Overturning FS",f(FSo,2)],["Sliding FS",f(FSs,2)],["Eccentricity e",f(e,2)+" m"],["Max base pressure",f(qmx,0)+" kPa"],["Min base pressure",f(qmn,0)+" kPa"]]);
+  $("chk").innerHTML=`${bd(FSo>=Fo,"OVERTURNING OK","OVERTURNING FAILS")}${bd(FSs>=Fs,"SLIDING OK","SLIDING FAILS")}${bd(mid,"RESULTANT IN MIDDLE THIRD","OUTSIDE MIDDLE THIRD")}${bd(qmx<=qa,"BEARING OK","BEARING EXCEEDED")}`;
+  $("tbl").innerHTML='<table><tr><th>Item</th><th>V (kN/m)</th><th>Arm (m)</th><th>M (kN·m/m)</th></tr>'+Vs.map(r=>`<tr><td>${r[0]}</td><td>${f(r[1],1)}</td><td>${f(r[2],2)}</td><td>${f(r[1]*r[2],1)}</td></tr>`).join("")+
+   `<tr class="tot"><td>Resisting total</td><td>${f(SV,1)}</td><td>${f(xb+Mo/SV,2)}</td><td>${f(Mr,1)}</td></tr><tr><th>Horizontal</th><th>H (kN/m)</th><th>Height (m)</th><th>M (kN·m/m)</th></tr>
+   <tr><td>Soil thrust</td><td>${f(Pah,1)}</td><td>${f(Ht/3,2)}</td><td>${f(Pah*Ht/3,1)}</td></tr><tr><td>Surcharge thrust</td><td>${f(Paq,1)}</td><td>${f(Ht/2,2)}</td><td>${f(Paq*Ht/2,1)}</td></tr><tr class="tot"><td>Overturning total</td><td>${f(SH,1)}</td><td></td><td>${f(Mo,1)}</td></tr></table>`;
+  const W=360,Hh=250,x1=B+Bh*.6+.4,s=Math.min((W-30)/x1,150/(Ht+Bh*Math.tan(be)*.6+.3)),ox=15,oy=170,X=x=>ox+x*s,Y=y=>oy-y*s,top=tb+H,xe=B+.6,ye=top+Math.tan(be)*(xe-Lt-t2),pk=Math.max(qmx,1),ps=40/pk;
+  $("plot").innerHTML=`<svg viewBox="0 0 ${W} ${Hh}" role="img"><polygon points="${X(Lt+t2)},${Y(tb)} ${X(xe)},${Y(tb)} ${X(xe)},${Y(ye)} ${X(Lt+t2)},${Y(top)}" fill="var(--c2)" fill-opacity=".18"/>
+  <rect x="${X(0)}" y="${Y(tb)}" width="${B*s}" height="${tb*s}" fill="var(--c1)" fill-opacity=".5"/><polygon points="${X(Lt)},${Y(tb)} ${X(Lt+t2)},${Y(tb)} ${X(Lt+t2)},${Y(top)} ${X(Lt+t2-t1)},${Y(top)}" fill="var(--c1)" fill-opacity=".5" stroke="var(--c1)"/>
+  <polygon points="${X(0)},${Y(0)+2} ${X(B)},${Y(0)+2} ${X(B)},${Y(0)+2+qmn*ps} ${X(0)},${Y(0)+2+qmx*ps}" fill="var(--c2)" fill-opacity=".3" stroke="var(--c2)"/>
+  <text x="${X(0)}" y="${Y(0)+qmx*ps+16}" font-size="11" fill="var(--tx)">${f(qmx,0)} kPa</text><text x="${X(B)}" y="${Y(0)+qmn*ps+16}" font-size="11" fill="var(--tx)" text-anchor="end">${f(qmn,0)} kPa</text></svg>`}
+document.querySelectorAll("input,select").forEach(e=>{e.addEventListener("input",rw);e.addEventListener("change",rw)});
+rw();
+</script>
+</body>
+</html>

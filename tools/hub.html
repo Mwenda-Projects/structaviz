@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Civil Engineering Toolkit | StructaViz</title>
+<style>
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:0 auto}
+:root{--bg:#090c11;--card:#10141c;--tx:#e2e8f0;--mut:#8a99b2;--bd:rgba(150,180,220,.16);--ac:#4fa8ff;--ok:#00c896;--c1:#4fa8ff;--c2:#f97316;--c3:#a78bfa;--on-ac:#071522;color-scheme:dark}
+:root:root:root{--teal:#14b8a6;--red:#ef4444}
+:root:root:root[data-theme="light"]{--teal:#0f766e;--red:#b91c1c}
+h1{margin:4px 0 4px}
+p.sub{color:var(--mut);margin:0 0 16px;font-size:14px}
+.search{position:relative;margin-bottom:10px}
+.search input{width:100%;padding:11px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font:inherit}
+.chips{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px}
+.chips button{white-space:nowrap;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:999px;padding:6px 14px;font:inherit;font-size:13px}
+.count{font-size:12px;color:var(--mut);margin:0 0 10px}
+.tools{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:640px){.tools{grid-template-columns:1fr 1fr}}
+@media (min-width:1000px){.tools{grid-template-columns:1fr 1fr 1fr}}
+a.tool{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);text-decoration:none;transition:border-color .18s,transform .18s,box-shadow .18s}
+a.tool:hover{border-color:var(--ac);transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.18)}
+a.tool:active{transform:scale(.99)}
+.top{display:flex;gap:12px;align-items:center}
+.tb{--hue:var(--ac);flex:none;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font:700 11px var(--svz-mono,monospace);letter-spacing:.5px;color:var(--hue);background:color-mix(in srgb,var(--hue) 12%,transparent);border:1px solid color-mix(in srgb,var(--hue) 30%,transparent)}
+.tb.green{--hue:var(--ok)}.tb.blue{--hue:var(--c1)}.tb.orange{--hue:var(--c2)}.tb.purple{--hue:var(--c3)}.tb.teal{--hue:var(--teal)}.tb.red{--hue:var(--red)}
+a.tool h2{font:600 16px/1.25 var(--svz-sans,inherit);letter-spacing:0;text-transform:none;color:var(--tx);margin:0}
+.cat{font:400 10px var(--svz-mono,monospace);color:var(--mut);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+a.tool p{margin:0;color:var(--mut);font-size:14px;line-height:1.5}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tags span{font-size:12px;border:1px solid var(--bd);border-radius:99px;padding:2px 9px;color:var(--mut)}
+.open{margin-top:auto;font:700 11px var(--svz-mono,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--ac)}
+.empty{color:var(--mut);padding:28px 0;text-align:center}
+.foot{font-size:12px;color:var(--mut);margin-top:22px;max-width:72ch;line-height:1.55}
+@media (prefers-reduced-motion:reduce){a.tool{transition:none}a.tool:hover{transform:none}}
+</style>
+<link rel="stylesheet" href="structaviz-tools.css">
+<script src="structaviz-tools.js"></script>
+</head>
+<body>
+<main>
+<h1>Civil Engineering Toolkit</h1>
+<p class="sub">Calculators for design checks, site work and project planning. Free, instant, and they run entirely in your browser.</p>
+<div class="search"><input id="q" type="search" placeholder="Search tools, for example culvert, mass haul, PERT" aria-label="Search tools" autocomplete="off" enterkeyhint="search"></div>
+<div class="chips" id="chips" role="group" aria-label="Filter by category"></div>
+<p class="count" id="count" aria-live="polite"></p>
+<div class="tools" id="list"></div>
+<div class="empty" id="none" hidden>No tools match that search.</div>
+<p class="foot">Results are for checking and learning. Verify against your design codes and a hand calculation before relying on them.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const TOOLS=[
+ {n:"Concrete Toolkit",b:"CON",k:"green",c:"Structures",u:"concrete-toolkit.html",d:"Mix design to ACI 211, site quantities from nominal mixes, and cube result compliance.",t:["Mix design","Quantities","Cube check"]},
+ {n:"Steel and Timber Member Checks",b:"STL",k:"blue",c:"Structures",u:"Steel%20and%20Timber%20Member%20Checks.html",d:"Eurocode-style resistance checks for steel beams, steel columns and timber beams, plus section properties.",t:["Steel beam","Steel column","Timber beam","Section properties"]},
+ {n:"Soil Mechanics Toolkit",b:"SOIL",k:"orange",c:"Geotechnical",u:"soil%20toolkit.html",d:"Foundation and ground calculations with the working shown so you can cross-check by hand.",t:["Bearing capacity","Settlement","Mohr circle","Earth pressure","Index properties"]},
+ {n:"Retaining Wall Stability",b:"RW",k:"purple",c:"Geotechnical",u:"Retaining%20Wall%20Stability.html",d:"Cantilever wall per metre run: Rankine active pressure, overturning, sliding and base bearing pressure.",t:["Overturning","Sliding","Bearing pressure"]},
+ {n:"Hydrology and Drainage",b:"HYD",k:"teal",c:"Water",u:"hydro%20toolkit.html",d:"From design storm to pipe, channel and culvert sizing.",t:["Rational method","Pipe sizing","Open channel","Culvert"]},
+ {n:"Survey Pro",b:"SRV",k:"green",c:"Survey and roads",u:"survey%20pro.html",d:"Traverse adjustment, levelling reduction, curve setting out and coordinate geometry.",t:["Traverse","Levelling","Curves","Join and polar"]},
+ {n:"Highway Geometry",b:"HWY",k:"blue",c:"Survey and roads",u:"highway%20toolkit.html",d:"Road alignment checks for stopping sight distance, horizontal curves with spirals, and vertical curves.",t:["Sight distance","Superelevation","Spiral","Vertical curves"]},
+ {n:"Earthworks and Quantities",b:"EW",k:"orange",c:"Construction",u:"earthworks-toolkit.html",d:"Cut and fill volumes, mass haul, trench quantities and a bill of quantities.",t:["Section volumes","Mass haul","Trench","BoQ"]},
+ {n:"Project Scheduler",b:"CPM",k:"purple",c:"Construction",u:"scheduler.html",d:"Critical path method with float, optional PERT probability and a Gantt chart.",t:["CPM","Float","PERT","Gantt"]},
+ {n:"Civil Unit Converter",b:"UNIT",k:"red",c:"Utilities",u:"Civil%20Unit%20Converter.html",d:"Site and design units, plus a slope converter and a reinforcement mass helper.",t:["10 unit types","Slope","Rebar mass"]}];
+const CATS=["All"].concat([...new Set(TOOLS.map(t=>t.c))]);let cat="All";
+function draw(){
+  const s=$("q").value.trim().toLowerCase();
+  $("chips").innerHTML=CATS.map(c=>`<button type="button" data-c="${c}" class="${c==cat?"on":""}" aria-pressed="${c==cat}">${c}</button>`).join("");
+  const L=TOOLS.filter(t=>(cat=="All"||t.c==cat)&&(!s||(t.n+" "+t.d+" "+t.t.join(" ")+" "+t.c).toLowerCase().includes(s)));
+  $("list").innerHTML=L.map(t=>`<a class="tool" href="${t.u}"><div class="top"><span class="tb ${t.k}" aria-hidden="true">${t.b}</span><div><h2>${t.n}</h2><div class="cat">${t.c}</div></div></div><p>${t.d}</p><div class="tags">${t.t.map(x=>`<span>${x}</span>`).join("")}</div><span class="open">Open tool \u2192</span></a>`).join("");
+  $("none").hidden=L.length>0;
+  $("count").textContent=L.length==TOOLS.length?TOOLS.length+" tools":"Showing "+L.length+" of "+TOOLS.length+" tools";
+}
+$("q").addEventListener("input",draw);
+$("chips").addEventListener("click",e=>{const c=e.target.dataset.c;if(c){cat=c;draw()}});
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Concrete Toolkit</title>
+<style>
+:root{--bg:#f4f5f5;--card:#fff;--tx:#1d2022;--mut:#667078;--bd:#dadfe2;--ac:#4a5a66;--ok:#1f7a4d;--bad:#b3261e;--c1:#2563a8;--c2:#b8470f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141718;--card:#1d2123;--tx:#edf0f1;--mut:#9ba5ab;--bd:#333b3f;--ac:#9fb3c2;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141718;--card:#1d2123;--tx:#edf0f1;--mut:#9ba5ab;--bd:#333b3f;--ac:#9fb3c2;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:700px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+p.sub{color:var(--mut);margin:0 0 12px;font-size:14px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+.tabs button{white-space:nowrap}
+.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+@media (prefers-color-scheme:dark){.tabs button.on{color:#0d1519}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select{width:100%;font:inherit;padding:9px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx)}
+button{font:inherit;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:9px;padding:8px 12px}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.r{border:1px solid var(--bd);border-radius:10px;padding:8px 10px}
+.r b{display:block;font-size:17px}.r span{font-size:12px;color:var(--mut)}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:380px;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:600}
+.sc td input{width:72px;padding:6px}.sc td input.w{width:140px}
+tr.tot td{font-weight:700}
+.note{font-size:12px;color:var(--mut);margin-top:6px}.mt{margin-top:10px}
+</style>
+<link rel="stylesheet" href="structaviz-tools.css">
+<script src="structaviz-tools.js"></script>
+</head>
+<body>
+<main>
+<h1>Concrete Toolkit</h1>
+<p class="sub">Mix design, site quantities and cube result checks. Confirm every design with trial batches.</p>
+<div class="tabs" id="tabs"><button data-t="cmx" class="on">Mix design</button><button data-t="cqt">Quantities</button><button data-t="ccb">Cube check</button></div>
+<section id="cmx"></section><section id="cqt" hidden></section><section id="ccb" hidden></section>
+</main>
+<script>
+const $=id=>document.getElementById(id),g=id=>parseFloat($(id).value),
+f=(x,n=2)=>(Math.abs(x)<5*Math.pow(10,-n-1)?0:x).toFixed(n),
+cards=a=>a.map(r=>`<div class="r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join(""),
+bd=(ok,a,b)=>`<span class="badge ${ok?"ok":"bad"}">${ok?a:b}</span>`,
+msg=t=>`<div class="r" style="grid-column:1/3"><span>Check your inputs</span><b>${t}</b></div>`,
+F=(id,l,v)=>`<div><label>${l}</label><input id="${id}" type="number" step="any" value="${v}"></div>`,
+S=(id,l,o,d)=>`<div><label>${l}</label><select id="${id}">${o.map(x=>`<option value="${x[0]}"${x[0]==d?" selected":""}>${x[1]}</option>`).join("")}</select></div>`,
+C=(h,b)=>`<div class="card"><h2>${h}</h2>${b}</div>`,
+bind=(s,fn)=>{$(s).addEventListener("input",fn);$(s).addEventListener("change",fn)};
+
+/* ---------- Mix design (ACI 211.1, absolute volume) ---------- */
+const WT={9.5:[207,228,243],12.5:[199,216,228],19:[190,205,216],25:[179,193,202],37.5:[166,181,190],50:[154,169,178],75:[130,145,160],150:[113,124,null]},
+ AIR={9.5:3,12.5:2.5,19:2,25:1.5,37.5:1,50:.5,75:.3,150:.2},
+ CAV={9.5:[.50,.48,.46,.44],12.5:[.59,.57,.55,.53],19:[.66,.64,.62,.60],25:[.71,.69,.67,.65],37.5:[.75,.73,.71,.69],50:[.78,.76,.74,.72],75:[.82,.80,.78,.76],150:[.87,.85,.83,.81]},
+ WC=[[15,.79],[20,.69],[25,.61],[30,.54],[35,.47],[40,.42]];
+function wcOf(s){if(s<=15)return WC[0][1];if(s>=40)return WC[5][1];for(let i=0;i<5;i++)if(s<=WC[i+1][0])return WC[i][1]+(WC[i+1][1]-WC[i][1])*(s-WC[i][0])/5}
+function cav(sz,fm){const a=CAV[sz],x=Math.max(2.4,Math.min(3,fm)),i=Math.min(Math.floor((x-2.4)/.2+1e-9),2),t=(x-2.4-.2*i)/.2;return a[i]+(a[i+1]-a[i])*t}
+const SZ=[9.5,12.5,19,25,37.5,50,75,150].map(x=>[x,x+" mm"]);
+$("cmx").innerHTML=C("Requirements",`<div class="grid">${F("mF","Specified strength (MPa)",25)}${S("mB","Strength basis",[["cyl","Cylinder f′c"],["cube","Cube (converted ÷ 1.25)"]],"cube")}${F("mSd","Standard deviation (MPa, blank if no data)","")}
+${S("mSl","Slump",[[0,"25 to 50 mm"],[1,"75 to 100 mm"],[2,"150 to 175 mm"]],1)}${S("mZ","Maximum aggregate size",SZ,19)}${S("mX","Exposure (w/c limit)",[[.65,"Mild, interior (0.65)"],[.55,"Moderate (0.55)"],[.50,"Severe, wet (0.50)"],[.45,"Very severe, marine (0.45)"]],.55)}
+${F("mMc","Minimum cement (kg/m³)",300)}${F("mV","Trial batch volume (m³)",0.1)}</div><div class="note">Non-air-entrained concrete. If strength is given as a cube result it is divided by 1.25 to get the cylinder strength the ACI tables use.</div>`)+
+C("Materials",`<div class="grid">${F("mFm","Sand fineness modulus",2.7)}${F("mCs","Cement relative density",3.15)}${F("mGs","Coarse aggregate relative density (OD)",2.65)}${F("mSs","Sand relative density (OD)",2.62)}${F("mBd","Coarse dry-rodded density (kg/m³)",1600)}
+${F("mAc","Coarse absorption (%)",0.8)}${F("mAf","Sand absorption (%)",1.2)}${F("mWc","Coarse moisture content (%)",0.5)}${F("mWf","Sand moisture content (%)",4)}</div>`)+
+C("Mix proportions",`<div class="res" id="mres"></div><div id="mchk" class="mt"></div><div class="sc mt" id="mtbl"></div>`);
+function mix(){
+  let fc=g("mF");const sd=g("mSd"),sl=+$("mSl").value,sz=+$("mZ").value,wl=+$("mX").value,mc=g("mMc"),V=g("mV"),fm=g("mFm"),sc=g("mCs"),sg=g("mGs"),ss=g("mSs"),bd_=g("mBd"),
+    ac=g("mAc")||0,af=g("mAf")||0,wc_=g("mWc")||0,wf=g("mWf")||0;
+  if(!(fc>0)||!(V>0)||!(fm>0)||!(sc>0)||!(sg>0)||!(ss>0)||!(bd_>0)||!(mc>=0)||sd<0){$("mres").innerHTML=msg("Check strength, densities, fineness modulus and batch volume.");$("mchk").innerHTML=$("mtbl").innerHTML="";return}
+  if($("mB").value=="cube")fc/=1.25;
+  const fcr=sd>0?(fc>35?Math.max(fc+1.34*sd,.9*fc+2.33*sd):Math.max(fc+1.34*sd,fc+2.33*sd-3.5)):(fc<21?fc+7:fc<=35?fc+8.5:1.1*fc+5),
+    wS=wcOf(fcr),wc=Math.min(wS,wl),W=WT[sz][sl];
+  if(W==null){$("mres").innerHTML=msg("No table value for 150 mm aggregate at this slump. Choose a lower slump.");$("mchk").innerHTML=$("mtbl").innerHTML="";return}
+  let C_=W/wc;const raised=C_<mc;if(raised)C_=mc;const wcE=W/C_,air=AIR[sz],ca=cav(sz,fm)*bd_,
+    vol=W/1000+C_/(sc*1000)+ca/(sg*1000)+air/100,fa=(1-vol)*ss*1000;
+  if(fa<=0){$("mres").innerHTML=msg("Over-volumed mix. Reduce the coarse aggregate or raise the fineness modulus.");$("mchk").innerHTML=$("mtbl").innerHTML="";return}
+  const cm=ca*(1+wc_/100),fmz=fa*(1+wf/100),wadd=W-(ca*(wc_-ac)+fa*(wf-af))/100;
+  $("mres").innerHTML=cards([["Target mean strength",f(fcr,1)+" MPa (cyl)"],["w/c from strength",f(wS,2)],["w/c adopted",f(wcE,2)],["Free water",f(W,0)+" kg/m³"],["Cement",f(C_,0)+" kg/m³"],["Entrapped air",f(air,1)+" %"],
+    ["Mass ratio (cement : sand : coarse)","1 : "+f(fa/C_,2)+" : "+f(ca/C_,2)],["Wet density",f(W+C_+ca+fa,0)+" kg/m³"]]);
+  $("mchk").innerHTML=`Durability w/c limit: ${bd(wcE<=wl+1e-9,"MET","NOT MET")} Cement content: ${bd(C_>=mc,"MET","LOW")}${raised?'<div class="note">The minimum cement content governed, so the w/c was recalculated.</div>':""}${wS>wl?'<div class="note">The exposure w/c limit governs over the strength requirement.</div>':""}`;
+  $("mtbl").innerHTML='<table><tr><th>Material</th><th>Per m³ (OD basis)</th><th>Trial batch (as used)</th></tr>'+
+    [["Cement",C_,C_*V],["Sand",fa,fmz*V],["Coarse aggregate",ca,cm*V],["Water to add",W,wadd*V]].map(r=>`<tr><td>${r[0]}</td><td>${f(r[1],1)} kg</td><td>${f(r[2],2)} kg</td></tr>`).join("")+
+    `<tr class="tot"><td>Cement bags (50 kg) per m³</td><td>${f(C_/50,1)}</td><td>${f(C_*V/50,2)}</td></tr></table><div class="note">Aggregate masses are oven-dry for the design. The batch column adds aggregate moisture and reduces the added water by the free moisture (moisture content − absorption). Coarse aggregate uses the ACI dry-rodded volume method.</div>`}
+bind("cmx",mix);
+
+/* ---------- Nominal mix quantities ---------- */
+const QR=[{n:"Foundation strip",L:"20",W:"0.6",H:"0.3",c:"1"},{n:"Ground slab",L:"8",W:"6",H:"0.15",c:"1"},{n:"Columns",L:"0.3",W:"0.3",H:"3",c:"8"}];
+$("cqt").innerHTML=C("Members",`<div class="sc" id="qrows"></div><button id="qadd" class="mt">+ Add member</button>`)+
+C("Mix and factors",`<div class="grid">${S("qP","Nominal mix preset",[["1,1.5,3","1 : 1.5 : 3 (about C25)"],["1,2,4","1 : 2 : 4 (about C20)"],["1,3,6","1 : 3 : 6 (about C10)"],["x","Custom"]],"1,2,4")}${F("qW","Waste allowance (%)",5)}
+${F("qC","Cement parts",1)}${F("qS","Sand parts",2)}${F("qA","Aggregate parts",4)}${F("qD","Dry volume factor",1.54)}${F("qWc","Water-cement ratio",0.55)}${F("qBs","Sand bulk density (kg/m³)",1600)}${F("qBa","Aggregate bulk density (kg/m³)",1500)}</div>
+<div class="note">Cement is taken at 1440 kg/m³ (50 kg bag = 0.0347 m³). Sand bulking is not included, so allow extra for damp sand.</div>`)+
+C("Materials",`<div class="res" id="qres"></div>`);
+function qRows(){$("qrows").innerHTML='<table><tr><th>Member</th><th>L (m)</th><th>W (m)</th><th>H (m)</th><th>No.</th><th></th></tr>'+QR.map((r,i)=>`<tr><td><input class="w" data-i="${i}" data-k="n" value="${r.n}"></td>${["L","W","H","c"].map(k=>`<td><input data-i="${i}" data-k="${k}" value="${r[k]}"></td>`).join("")}<td><button data-del="${i}" aria-label="Remove">×</button></td></tr>`).join("")+"</table>"}
+function qt(){
+  let v=0;for(const r of QR)v+=(+r.L||0)*(+r.W||0)*(+r.H||0)*(+r.c||0);
+  const w=(g("qW")||0)/100,pc=g("qC"),ps=g("qS"),pa=g("qA"),df=g("qD"),wc=g("qWc"),bs=g("qBs"),ba=g("qBa");
+  if(!(pc>0)||!(ps>=0)||!(pa>=0)||!(df>0)||!(v>0)){$("qres").innerHTML=msg("Add member dimensions and valid mix parts.");return}
+  const vt=v*(1+w),dry=vt*df,sm=pc+ps+pa,cv=dry*pc/sm,sv=dry*ps/sm,av=dry*pa/sm,ck=cv*1440;
+  $("qres").innerHTML=cards([["Net concrete volume",f(v,2)+" m³"],["Volume with waste",f(vt,2)+" m³"],["Cement",f(ck/50,1)+" bags ("+f(ck,0)+" kg)"],["Sand",f(sv,2)+" m³ ("+f(sv*bs/1000,2)+" t)"],
+    ["Coarse aggregate",f(av,2)+" m³ ("+f(av*ba/1000,2)+" t)"],["Water",f(ck*wc,0)+" litres"]])}
+$("qP").addEventListener("change",e=>{if(e.target.value!="x"){const p=e.target.value.split(",");$("qC").value=p[0];$("qS").value=p[1];$("qA").value=p[2]}qt()});
+$("cqt").addEventListener("input",e=>{const i=e.target.dataset.i;if(i!==undefined)QR[i][e.target.dataset.k]=e.target.value;if(e.target.id&&e.target.id[0]=="q"&&"qCqSqA".includes(e.target.id))$("qP").value="x";qt()});
+$("cqt").addEventListener("click",e=>{const d=e.target.dataset.del;if(d!==undefined&&QR.length>1){QR.splice(+d,1);qRows();qt()}if(e.target.id=="qadd"){QR.push({n:"",L:"",W:"",H:"",c:"1"});qRows();qt()}});
+
+/* ---------- Cube result check ---------- */
+$("ccb").innerHTML=C("Test results",`<div class="grid">${F("kF","Specified strength (MPa)",25)}${S("kC","Criteria",[["en","EN 206 / BS 8500 style"],["aci","ACI 318 style"]])}</div>
+<div class="mt"><label>28-day results (MPa), separated by spaces or commas</label><input id="kR" value="29.5, 31.2, 27.8, 33.0, 30.1, 28.4, 32.6"></div>
+<div class="note">Enter results in the same basis as the specification (cube with cube, cylinder with cylinder). Groups are overlapping sets of 3 consecutive results.</div>`)+
+C("Statistics and compliance",`<div class="res" id="kres"></div><div id="kchk" class="mt"></div><div class="sc mt" id="ktbl"></div>`);
+function cb(){
+  const fk=g("kF"),a=$("kR").value.split(/[\s,;]+/).map(parseFloat).filter(isFinite),n=a.length;
+  if(!(fk>0)||n<3){$("kres").innerHTML=msg("Enter the specified strength and at least 3 results.");$("kchk").innerHTML=$("ktbl").innerHTML="";return}
+  const m=a.reduce((s,x)=>s+x,0)/n,sd=Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/(n-1)),en=$("kC").value=="en",lim=en?4:(fk>35?.1*fk:3.5);let all=true,t='<table><tr><th>Group</th><th>Mean</th><th>Lowest</th><th>Result</th></tr>';
+  for(let i=0;i+2<n;i++){const s=a.slice(i,i+3),mm=(s[0]+s[1]+s[2])/3,lo=Math.min(...s),ok=en?(mm>=fk+4&&lo>=fk-4):(mm>=fk&&lo>=fk-lim);if(!ok)all=false;
+    t+=`<tr><td>${i+1}–${i+3}</td><td>${f(mm,1)}</td><td>${f(lo,1)}</td><td class="${ok?"ok":"bad"}">${ok?"Pass":"Fail"}</td></tr>`}
+  $("kres").innerHTML=cards([["Results",n],["Mean",f(m,1)+" MPa"],["Lowest / highest",f(Math.min(...a),1)+" / "+f(Math.max(...a),1)],["Standard deviation",f(sd,2)+" MPa"],["Coefficient of variation",f(sd/m*100,1)+" %"],["Mean − 1.64 s",f(m-1.64*sd,1)+" MPa"]]);
+  $("kchk").innerHTML=`Overall: ${bd(all,"ALL GROUPS PASS","ONE OR MORE GROUPS FAIL")} Characteristic estimate vs specified: ${bd(m-1.64*sd>=fk,"MET","NOT MET")}<div class="note">${en?"Each group needs a mean of at least fck + 4 MPa and no result below fck − 4 MPa.":"Each group needs a mean of at least f′c and no result below f′c − "+f(lim,1)+" MPa."} Mean − 1.64 s is an indicative 5% defective estimate and needs a reasonable sample size.</div>`;
+  $("ktbl").innerHTML=t+"</table>"}
+bind("ccb",cb);
+
+$("tabs").onclick=e=>{const t=e.target.dataset.t;if(!t)return;
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b===e.target));
+  ["cmx","cqt","ccb"].forEach(s=>$(s).hidden=s!=t)};
+qRows();mix();qt();cb();
+</script>
+</body>
+</html>

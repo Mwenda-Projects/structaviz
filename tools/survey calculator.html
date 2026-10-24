@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Survey Calculator</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#6b6a64;--bd:#dedcd4;--ac:#b8470f;--ok:#1f7a4d;--bad:#b3261e;--c1:#2563a8;--c2:#b8470f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161614;--card:#211f1c;--tx:#f0eee8;--mut:#a29f95;--bd:#38352f;--ac:#f0894f;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161614;--card:#211f1c;--tx:#f0eee8;--mut:#a29f95;--bd:#38352f;--ac:#f0894f;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:680px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+p.sub{color:var(--mut);margin:0 0 14px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input{width:100%;font:inherit;padding:9px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx)}
+.row{display:grid;grid-template-columns:42px 1fr 1fr 38px;gap:6px;margin-bottom:6px;align-items:center}
+.row .n{font-size:13px;color:var(--mut)}
+.hd{font-size:12px;color:var(--mut)}
+button{font:inherit;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:9px;padding:8px 12px}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.r{border:1px solid var(--bd);border-radius:10px;padding:8px 10px}
+.r b{display:block;font-size:17px}
+.r span{font-size:12px;color:var(--mut)}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--mut);font-weight:600}
+svg{width:100%;height:auto;display:block}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+</style>
+<link rel="stylesheet" href="structaviz-tools.css">
+<script src="structaviz-tools.js"></script>
+</head>
+<body>
+<main>
+<h1>Survey Calculator</h1>
+<p class="sub">Closed traverse with Bowditch adjustment, closing error, precision and area. Plus a quick join (inverse) calculation.</p>
+
+<div class="card">
+<h2>Traverse input</h2>
+<div class="grid" style="margin-bottom:10px">
+<div><label>Start Easting (m)</label><input id="E0" type="number" value="1000" step="any"></div>
+<div><label>Start Northing (m)</label><input id="N0" type="number" value="1000" step="any"></div>
+<div><label>Required precision (1 : X)</label><input id="req" type="number" value="5000" step="500"></div>
+</div>
+<div class="row hd"><span>Leg</span><span>Whole circle bearing</span><span>Distance (m)</span><span></span></div>
+<div id="rows"></div>
+<button id="add">+ Add leg</button>
+<div class="note">Bearings: decimal degrees (45.5) or degrees minutes seconds (45 30 00). The last leg should return to the start point.</div>
+</div>
+
+<div class="card">
+<h2>Closure</h2>
+<div class="res" id="res"></div>
+<div id="chk" style="margin-top:10px"></div>
+</div>
+
+<div class="card"><h2>Plot</h2><div id="plot"></div>
+<div class="note">Solid: adjusted traverse. Dashed: raw traverse (the gap at the start is the closing error, not to scale).</div></div>
+
+<div class="card"><h2>Adjusted coordinates</h2><div class="sc" id="tbl"></div></div>
+
+<div class="card">
+<h2>Join (inverse) calculation</h2>
+<div class="grid">
+<div><label>Point A Easting</label><input id="jE1" type="number" value="1000" step="any"></div>
+<div><label>Point A Northing</label><input id="jN1" type="number" value="1000" step="any"></div>
+<div><label>Point B Easting</label><input id="jE2" type="number" value="1120.5" step="any"></div>
+<div><label>Point B Northing</label><input id="jN2" type="number" value="1085.25" step="any"></div>
+</div>
+<div class="res" id="jres" style="margin-top:10px"></div>
+</div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let legs=[{b:"45 00 00",d:"100.02"},{b:"135 00 30",d:"99.98"},{b:"225 00 00",d:"100.03"},{b:"315 00 00",d:"100.00"}];
+
+function parseAng(s){
+  const m=String(s).match(/-?\d+(\.\d+)?/g);
+  if(!m)return NaN;
+  const d=parseFloat(m[0]),mi=m[1]?parseFloat(m[1]):0,se=m[2]?parseFloat(m[2]):0;
+  return d+mi/60+se/3600;
+}
+function dms(a){
+  a=((a%360)+360)%360;
+  let t=Math.round(a*3600)%(360*3600);
+  const d=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;
+  return d+"° "+String(m).padStart(2,"0")+"′ "+String(s).padStart(2,"0")+"″";
+}
+const f=(x,n=3)=>(Math.abs(x)<5e-10?0:x).toFixed(n);
+
+function renderRows(){
+  const n=legs.length;
+  $("rows").innerHTML=legs.map((l,i)=>`<div class="row"><span class="n">${i+1}-${(i+1)%n+1}</span>
+  <input data-i="${i}" data-k="b" value="${l.b}" aria-label="Bearing leg ${i+1}">
+  <input data-i="${i}" data-k="d" value="${l.d}" inputmode="decimal" aria-label="Distance leg ${i+1}">
+  <button data-del="${i}" aria-label="Remove leg">×</button></div>`).join("");
+}
+
+function run(){
+  const n=legs.length,E0=parseFloat($("E0").value)||0,N0=parseFloat($("N0").value)||0;
+  const L=legs.map(l=>{const th=parseAng(l.b)*Math.PI/180,D=parseFloat(l.d);
+    return {D,th,dN:D*Math.cos(th),dE:D*Math.sin(th)}});
+  if(L.some(l=>!isFinite(l.D)||!isFinite(l.th))){
+    $("res").innerHTML='<div class="r" style="grid-column:1/3"><span>Check your inputs</span><b>Every leg needs a bearing and a distance.</b></div>';
+    $("chk").innerHTML="";$("plot").innerHTML="";$("tbl").innerHTML="";return;
+  }
+  const sumD=L.reduce((s,l)=>s+l.D,0);
+  const eN=L.reduce((s,l)=>s+l.dN,0),eE=L.reduce((s,l)=>s+l.dE,0);
+  const lin=Math.hypot(eE,eN);
+  const prec=lin>1e-9?sumD/lin:Infinity;
+  const req=parseFloat($("req").value)||5000;
+  const closeBrg=Math.atan2(-eE,-eN)*180/Math.PI;
+  // coordinates
+  const R=[[E0,N0]],A=[[E0,N0]];
+  L.forEach(l=>{
+    const cN=l.dN-eN*l.D/sumD,cE=l.dE-eE*l.D/sumD;
+    l.cN=cN;l.cE=cE;
+    const r=R[R.length-1],a=A[A.length-1];
+    R.push([r[0]+l.dE,r[1]+l.dN]);
+    A.push([a[0]+cE,a[1]+cN]);
+  });
+  // area (shoelace on adjusted points, excluding repeated end)
+  let ar=0;
+  for(let i=0;i<n;i++){const p=A[i],q=A[(i+1)%n];ar+=p[0]*q[1]-q[0]*p[1]}
+  ar=Math.abs(ar)/2;
+
+  $("res").innerHTML=[
+    ["Sum of ΔN (error)",f(eN,4)+" m"],["Sum of ΔE (error)",f(eE,4)+" m"],
+    ["Linear misclosure",f(lin,4)+" m"],["Perimeter",f(sumD,3)+" m"],
+    ["Precision",prec===Infinity?"Perfect closure":"1 : "+Math.round(prec)],
+    ["Closing error bearing",lin>1e-9?dms(closeBrg):"n/a"],
+    ["Area (adjusted)",f(ar,2)+" m²"],["Area (hectares)",f(ar/10000,4)+" ha"]
+  ].map(r=>`<div class="r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join("");
+  const ok=prec>=req;
+  $("chk").innerHTML=`Against 1 : ${req}: <span class="badge ${ok?"ok":"bad"}">${ok?"ACCEPTABLE":"REMEASURE"}</span>
+  <div class="note">Bowditch spreads each correction in proportion to leg length: correction = (total error × leg length) ÷ perimeter, with the sign reversed.</div>`;
+
+  // table
+  let t='<table><tr><th>Leg</th><th>Bearing</th><th>ΔN</th><th>ΔE</th><th>Corr ΔN</th><th>Corr ΔE</th><th>Easting</th><th>Northing</th></tr>';
+  t+=`<tr><td>Start</td><td></td><td></td><td></td><td></td><td></td><td>${f(E0)}</td><td>${f(N0)}</td></tr>`;
+  L.forEach((l,i)=>{
+    t+=`<tr><td>${i+1}-${(i+1)%n+1}</td><td>${dms(l.th*180/Math.PI)}</td><td>${f(l.dN)}</td><td>${f(l.dE)}</td><td>${f(l.cN)}</td><td>${f(l.cE)}</td><td>${f(A[i+1][0])}</td><td>${f(A[i+1][1])}</td></tr>`;
+  });
+  t+=`<tr><td><b>Sum</b></td><td></td><td>${f(eN,4)}</td><td>${f(eE,4)}</td><td>${f(L.reduce((s,l)=>s+l.cN,0),4)}</td><td>${f(L.reduce((s,l)=>s+l.cE,0),4)}</td><td></td><td></td></tr></table>`;
+  $("tbl").innerHTML=t;
+
+  // plot
+  const W=360,H=300,pd=28,all=R.concat(A);
+  const minE=Math.min(...all.map(p=>p[0])),maxE=Math.max(...all.map(p=>p[0]));
+  const minN=Math.min(...all.map(p=>p[1])),maxN=Math.max(...all.map(p=>p[1]));
+  const rE=maxE-minE||1,rN=maxN-minN||1;
+  const s=Math.min((W-2*pd)/rE,(H-2*pd)/rN);
+  const ox=(W-rE*s)/2,oy=(H-rN*s)/2;
+  const X=e=>ox+(e-minE)*s,Y=nn=>H-oy-(nn-minN)*s;
+  const path=P=>P.map((p,i)=>(i?"L":"M")+X(p[0]).toFixed(1)+","+Y(p[1]).toFixed(1)).join("");
+  let dots="";
+  A.slice(0,n).forEach((p,i)=>{
+    dots+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4" fill="var(--c1)"/><text x="${X(p[0])+7}" y="${Y(p[1])-7}" font-size="12" fill="var(--tx)">${i+1}</text>`;
+  });
+  $("plot").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img">
+  <path d="${path(A)}Z" fill="var(--c1)" fill-opacity=".12" stroke="var(--c1)" stroke-width="2"/>
+  <path d="${path(R)}" fill="none" stroke="var(--c2)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  ${dots}
+  <text x="12" y="18" font-size="12" fill="var(--mut)">N ↑</text></svg>`;
+}
+
+function join(){
+  const g=id=>parseFloat($(id).value)||0;
+  const dE=g("jE2")-g("jE1"),dN=g("jN2")-g("jN1");
+  const d=Math.hypot(dE,dN),b=Math.atan2(dE,dN)*180/Math.PI;
+  $("jres").innerHTML=[
+    ["Distance A to B",f(d)+" m"],["Bearing A to B",d>0?dms(b):"n/a"],
+    ["Back bearing B to A",d>0?dms(b+180):"n/a"],["ΔE, ΔN",f(dE)+", "+f(dN)]
+  ].map(r=>`<div class="r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join("");
+}
+
+$("rows").addEventListener("input",e=>{
+  const i=e.target.dataset.i;if(i===undefined)return;
+  legs[i][e.target.dataset.k]=e.target.value;run();
+});
+$("rows").addEventListener("click",e=>{
+  const i=e.target.dataset.del;if(i===undefined||legs.length<=3)return;
+  legs.splice(+i,1);renderRows();run();
+});
+$("add").addEventListener("click",()=>{legs.push({b:"",d:""});renderRows();run()});
+["E0","N0","req"].forEach(id=>$(id).addEventListener("input",run));
+["jE1","jN1","jE2","jN2"].forEach(id=>$(id).addEventListener("input",join));
+renderRows();run();join();
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "StructaViz",
+  "short_name": "StructaViz",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

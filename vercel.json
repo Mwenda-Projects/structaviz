@@ -1,4 +1,8 @@
 {
+  "redirects": [
+    { "source": "/tools", "destination": "/tools/hub.html", "permanent": false },
+    { "source": "/tools/", "destination": "/tools/hub.html", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/app", "destination": "/app.html" },

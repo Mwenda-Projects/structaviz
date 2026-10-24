@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Civil Unit Converter</title>
+<style>
+:root{--bg:#f4f5f4;--card:#fff;--tx:#1d201e;--mut:#677069;--bd:#dae0db;--ac:#2f6b57;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#131615;--card:#1c201e;--tx:#ecf0ed;--mut:#9aa59d;--bd:#323a35;--ac:#7fd1b3;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#131615;--card:#1c201e;--tx:#ecf0ed;--mut:#9aa59d;--bd:#323a35;--ac:#7fd1b3;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:700px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+p.sub{color:var(--mut);margin:0 0 12px;font-size:14px}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+.chips button{white-space:nowrap}
+.chips button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+@media (prefers-color-scheme:dark){.chips button.on{color:#06180f}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select{width:100%;font:inherit;padding:9px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx)}
+button{font:inherit;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:9px;padding:8px 12px}
+.big{font-size:26px;font-weight:700;margin:10px 0 2px;word-break:break-all}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.r{border:1px solid var(--bd);border-radius:10px;padding:8px 10px}
+.r b{display:block;font-size:16px}.r span{font-size:12px;color:var(--mut)}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:300px;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:600}
+.note{font-size:12px;color:var(--mut);margin-top:6px}.mt{margin-top:10px}.row{display:flex;gap:8px;align-items:end}
+</style>
+<link rel="stylesheet" href="structaviz-tools.css">
+<script src="structaviz-tools.js"></script>
+</head>
+<body>
+<main>
+<h1>Civil Unit Converter</h1>
+<p class="sub">Common site and design units, plus slope and reinforcement mass helpers.</p>
+<div class="chips" id="chips"></div>
+<div class="card"><h2 id="ttl">Convert</h2>
+<div class="grid"><div><label>Value</label><input id="v" type="number" step="any" value="1"></div><div><label>From</label><select id="a"></select></div></div>
+<div class="row mt"><div style="flex:1"><label>To</label><select id="b"></select></div><button id="sw" aria-label="Swap units">⇄ Swap</button></div>
+<div class="big" id="out"></div><div class="note" id="eq"></div></div>
+<div class="card"><h2>All units</h2><div class="sc" id="tbl"></div></div>
+<div class="card"><h2>Slope converter</h2><div class="grid"><div><label>Value</label><input id="sv" type="number" step="any" value="2"></div>
+<div><label>Unit</label><select id="su"><option value="p">Percent grade</option><option value="d">Degrees</option><option value="r">Ratio 1 : n (n horizontal per 1 vertical)</option></select></div></div><div class="res mt" id="sres"></div></div>
+<div class="card"><h2>Reinforcement mass</h2><div class="grid"><div><label>Bar diameter (mm)</label><input id="rd" type="number" step="any" value="16"></div><div><label>Length per bar (m)</label><input id="rl" type="number" step="any" value="12"></div><div><label>Number of bars</label><input id="rn" type="number" step="any" value="10"></div></div>
+<div class="res mt" id="rres"></div><div class="sc mt" id="rtbl"></div><div class="note">Mass per metre = d² / 162.2 kg (about 7850 kg/m³ steel).</div></div>
+<div class="card"><h2>Handy equivalents</h2><div class="note" style="margin:0;font-size:13px">1 kPa = 1 kN/m². 1 MPa = 1 N/mm². 1 kN/m³ ≈ 102 kg/m³ of weight. 1 m³ of water ≈ 1 tonne ≈ 9.81 kN. Concrete is about 24 kN/m³ and steel about 78.5 kN/m³. A cube strength is roughly 1.25 times the cylinder strength.</div></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const U={
+ "Length":{b:"m",u:[["mm",.001],["cm",.01],["m",1],["km",1000],["in",.0254],["ft",.3048],["yd",.9144],["mile",1609.344]]},
+ "Area":{b:"m²",u:[["mm²",1e-6],["cm²",1e-4],["m²",1],["ha",1e4],["km²",1e6],["in²",6.4516e-4],["ft²",.09290304],["acre",4046.8564224]]},
+ "Volume":{b:"m³",u:[["mm³",1e-9],["cm³",1e-6],["litre",.001],["m³",1],["in³",1.6387064e-5],["ft³",.028316846592],["yd³",.764554857984],["US gallon",.003785411784],["UK gallon",.00454609]]},
+ "Force":{b:"N",u:[["N",1],["kN",1e3],["MN",1e6],["kgf",9.80665],["tonne-force",9806.65],["lbf",4.4482216152605],["kip",4448.2216152605]]},
+ "Pressure and stress":{b:"Pa",u:[["Pa",1],["kPa",1e3],["MPa",1e6],["bar",1e5],["kgf/cm²",98066.5],["psi",6894.757293168],["ksi",6894757.293168],["psf",47.88025898],["atm",101325]]},
+ "Unit weight":{b:"kN/m³",u:[["N/m³",.001],["kN/m³",1],["kg/m³ (weight)",.00980665],["t/m³ (weight)",9.80665],["lb/ft³",.157087464]]},
+ "Flow rate":{b:"m³/s",u:[["m³/s",1],["L/s",.001],["m³/h",1/3600],["m³/day",1/86400],["ML/day",1e3/86400],["ft³/s",.028316846592],["US gpm",6.30901964e-5]]},
+ "Velocity":{b:"m/s",u:[["m/s",1],["km/h",1/3.6],["ft/s",.3048],["mph",.44704],["knot",.514444444]]},
+ "Moment":{b:"kN·m",u:[["N·m",.001],["kN·m",1],["tf·m",9.80665],["lbf·ft",.0013558179483],["kip·ft",1.3558179483]]},
+ "Angle":{b:"degree",u:[["degree",1],["radian",180/Math.PI],["gradian",.9],["arcminute",1/60],["arcsecond",1/3600]]}};
+let cat="Length";
+const fmt=x=>{if(!isFinite(x))return "n/a";if(x==0)return "0";const a=Math.abs(x);return a>=1e9||a<1e-4?x.toExponential(5):String(Number(x.toPrecision(8)))};
+function setCat(c,keep){cat=c;const u=U[c].u,o=u.map((x,i)=>`<option value="${i}">${x[0]}</option>`).join("");$("a").innerHTML=o;$("b").innerHTML=o;
+  const i0=Math.max(0,u.findIndex(x=>x[1]==1));$("a").value=i0;$("b").value=Math.min(u.length-1,i0+(i0==u.length-1?-1:1));
+  $("chips").innerHTML=Object.keys(U).map(k=>`<button data-c="${k}" class="${k==cat?"on":""}">${k}</button>`).join("");$("ttl").textContent=c;run()}
+function run(){
+  const u=U[cat].u,v=parseFloat($("v").value),ia=+$("a").value,ib=+$("b").value;
+  if(!isFinite(v)){$("out").textContent="Enter a value";$("eq").textContent="";$("tbl").innerHTML="";return}
+  const base=v*u[ia][1],r=base/u[ib][1];
+  $("out").textContent=fmt(r)+" "+u[ib][0];$("eq").textContent=fmt(v)+" "+u[ia][0]+" equals "+fmt(r)+" "+u[ib][0];
+  $("tbl").innerHTML="<table><tr><th>Unit</th><th>Value</th></tr>"+u.map(x=>`<tr><td>${x[0]}</td><td>${fmt(base/x[1])}</td></tr>`).join("")+"</table>"}
+function slope(){
+  const v=parseFloat($("sv").value),k=$("su").value;let p;
+  if(!isFinite(v)||(k=="r"&&v==0)||(k=="d"&&Math.abs(v)>=90)){$("sres").innerHTML='<div class="r" style="grid-column:1/3"><span>Check your input</span><b>Enter a valid slope.</b></div>';return}
+  p=k=="p"?v:k=="d"?Math.tan(v*Math.PI/180)*100:100/v;
+  $("sres").innerHTML=[["Percent grade",fmt(p)+" %"],["Degrees",fmt(Math.atan(p/100)*180/Math.PI)+"°"],["Ratio 1 : n",p==0?"flat":"1 : "+fmt(100/Math.abs(p))],["Rise per 100 m",fmt(p)+" m"]].map(r=>`<div class="r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join("")}
+function rebar(){
+  const d=parseFloat($("rd").value),l=parseFloat($("rl").value),n=parseFloat($("rn").value),m=x=>x*x/162.2;
+  if(!(d>0)||!(l>0)||!(n>0)){$("rres").innerHTML='<div class="r" style="grid-column:1/3"><span>Check your input</span><b>Diameter, length and number above 0.</b></div>';return}
+  const tot=m(d)*l*n;
+  $("rres").innerHTML=[["Mass per metre",fmt(m(d))+" kg/m"],["Bar area",fmt(Math.PI*d*d/4)+" mm²"],["Mass per bar",fmt(m(d)*l)+" kg"],["Total mass",fmt(tot)+" kg ("+fmt(tot/1000)+" t)"]].map(r=>`<div class="r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join("");
+  $("rtbl").innerHTML="<table><tr><th>Diameter (mm)</th><th>Area (mm²)</th><th>kg per m</th></tr>"+[6,8,10,12,16,20,25,32,40].map(x=>`<tr><td>${x}</td><td>${fmt(Math.PI*x*x/4)}</td><td>${fmt(m(x))}</td></tr>`).join("")+"</table>"}
+$("chips").addEventListener("click",e=>{if(e.target.dataset.c)setCat(e.target.dataset.c)});
+["v","a","b"].forEach(i=>{$(i).addEventListener("input",run);$(i).addEventListener("change",run)});
+$("sw").onclick=()=>{const t=$("a").value;$("a").value=$("b").value;$("b").value=t;run()};
+["sv","su"].forEach(i=>{$(i).addEventListener("input",slope);$(i).addEventListener("change",slope)});
+["rd","rl","rn"].forEach(i=>$(i).addEventListener("input",rebar));
+setCat("Length");slope();rebar();
+</script>
+</body>
+</html>

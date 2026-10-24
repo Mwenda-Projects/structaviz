@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Highway Geometry Toolkit</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#1c1f24;--mut:#656c76;--bd:#d9dde3;--ac:#3b5b7a;--ok:#1f7a4d;--bad:#b3261e;--c1:#2563a8;--c2:#b8470f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13161a;--card:#1c2025;--tx:#eceff3;--mut:#9aa3ae;--bd:#333a43;--ac:#8db4d9;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#13161a;--card:#1c2025;--tx:#eceff3;--mut:#9aa3ae;--bd:#333a43;--ac:#8db4d9;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:700px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+p.sub{color:var(--mut);margin:0 0 12px;font-size:14px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+.tabs button{white-space:nowrap}
+.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+@media (prefers-color-scheme:dark){.tabs button.on{color:#0b1a28}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select{width:100%;font:inherit;padding:9px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx)}
+button{font:inherit;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:9px;padding:8px 12px}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.r{border:1px solid var(--bd);border-radius:10px;padding:8px 10px}
+.r b{display:block;font-size:17px}.r span{font-size:12px;color:var(--mut)}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:380px;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:600}
+svg{width:100%;height:auto;display:block}
+.note{font-size:12px;color:var(--mut);margin-top:6px}.mt{margin-top:10px}
+</style>
+<link rel="stylesheet" href="structaviz-tools.css">
+<script src="structaviz-tools.js"></script>
+</head>
+<body>
+<main>
+<h1>Highway Geometry Toolkit</h1>
+<p class="sub">Metric, AASHTO-style formulas. Always confirm limits against your local road design manual.</p>
+<div class="tabs" id="tabs"><button data-t="hgs" class="on">Sight distance</button><button data-t="hgh">Horizontal</button><button data-t="hgv">Vertical</button></div>
+<section id="hgs"></section><section id="hgh" hidden></section><section id="hgv" hidden></section>
+</main>
+<script>
+const $=id=>document.getElementById(id),g=id=>parseFloat($(id).value),rad=Math.PI/180,
+f=(x,n=2)=>(Math.abs(x)<5*Math.pow(10,-n-1)?0:x).toFixed(n),
+cards=a=>a.map(r=>`<div class="r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join(""),
+bd=(ok,a,b)=>`<span class="badge ${ok?"ok":"bad"}">${ok?a:b}</span>`,
+msg=t=>`<div class="r" style="grid-column:1/3"><span>Check your inputs</span><b>${t}</b></div>`,
+F=(id,l,v)=>`<div><label>${l}</label><input id="${id}" type="number" step="any" value="${v}"></div>`,
+T=(id,l,v)=>`<div><label>${l}</label><input id="${id}" value="${v}"></div>`,
+C=(h,b)=>`<div class="card"><h2>${h}</h2>${b}</div>`,
+bind=(s,fn)=>{$(s).addEventListener("input",fn);$(s).addEventListener("change",fn)};
+function parseAng(s){const m=String(s).match(/-?\d+(\.\d+)?/g);if(!m)return NaN;return parseFloat(m[0])+(m[1]?m[1]/60:0)+(m[2]?m[2]/3600:0)}
+function dms(a){const t=Math.round(a*3600),m=Math.floor(t%3600/60);return Math.floor(t/3600)+"° "+String(m).padStart(2,"0")+"′ "+String(t%60).padStart(2,"0")+"″"}
+const FT=[[30,.17],[40,.17],[50,.16],[60,.15],[70,.14],[80,.14],[90,.13],[100,.12],[110,.10],[120,.09]],
+  fAt=v=>{if(v<=30)return .17;if(v>=120)return .09;const i=Math.floor(v/10)-3,a=FT[i],b=FT[i+1];return a[1]+(b[1]-a[1])*(v-a[0])/10},
+  ssd=(V,t,a,G)=>{const k=a/9.81+G/100;return k>0?{rd:.278*V*t,br:V*V/(254*k)}:null};
+
+/* ---------- Stopping sight distance ---------- */
+$("hgs").innerHTML=C("Stopping sight distance",`<div class="grid">${F("sV","Design speed (km/h)",80)}${F("sT","Perception-reaction time (s)",2.5)}${F("sA","Deceleration (m/s²)",3.4)}${F("sG","Grade (%, uphill +, downhill −)",0)}</div>
+<div class="note">SSD = 0.278 V t + V² / (254 (a/9.81 + G/100)).</div>`)+
+C("Result",`<div class="res" id="sres"></div><div class="sc mt" id="stbl"></div>`);
+function ss(){
+  const V=g("sV"),t=g("sT"),a=g("sA"),G=g("sG")||0;
+  if(!(V>0)||!(t>=0)||!(a>0)||!ssd(V,t,a,G)){$("sres").innerHTML=msg("Speed and deceleration above 0, and the grade must not cancel braking.");$("stbl").innerHTML="";return}
+  const r=ssd(V,t,a,G),tot=r.rd+r.br;
+  $("sres").innerHTML=cards([["Reaction distance",f(r.rd,1)+" m"],["Braking distance",f(r.br,1)+" m"],["Stopping sight distance",f(tot,1)+" m"],["Design SSD (rounded up to 5 m)",Math.ceil(tot/5)*5+" m"]]);
+  let h='<table><tr><th>V (km/h)</th><th>Reaction</th><th>Braking</th><th>SSD (m)</th></tr>';
+  for(let v=30;v<=120;v+=10){const q=ssd(v,t,a,G);h+=q?`<tr><td>${v}</td><td>${f(q.rd,1)}</td><td>${f(q.br,1)}</td><td>${f(q.rd+q.br,1)}</td></tr>`:""}
+  $("stbl").innerHTML=h+"</table>"}
+bind("hgs",ss);
+
+/* ---------- Horizontal alignment ---------- */
+$("hgh").innerHTML=C("Design inputs",`<div class="grid">${F("hV","Design speed (km/h)",80)}${F("hE","Maximum superelevation emax (%)",8)}${F("hF","Side friction f (blank = table value)","")}${F("hR","Curve radius R (m)",250)}
+${T("hD","Deflection angle Δ","40 00 00")}${F("hLs","Spiral length Ls (m, 0 for none)",80)}${F("hC","Comfort rate C (m/s³)",0.6)}${F("hW","Lane width (m)",3.5)}${F("hN","Lanes rotated",1)}${F("hG","Relative gradient limit (%)",0.5)}${F("hX","Normal crossfall (%)",2)}</div>`)+
+C("Radius and superelevation",`<div class="res" id="hres"></div><div id="hchk" class="mt"></div>`)+C("Spiral transition",`<div class="res" id="hsp"></div><div id="hspn" class="note"></div>`);
+function hz(){
+  const V=g("hV"),em=g("hE")/100,fo=g("hF"),R=g("hR"),D=parseAng($("hD").value)*rad,Ls=g("hLs")||0,Cc=g("hC"),w=g("hW"),n=g("hN"),dg=g("hG")/100,cf=(g("hX")||0)/100;
+  if(!(V>0)||!(em>0)||!(R>0)||!(Cc>0)||!(w>0)||!(n>0)||!(dg>0)||!isFinite(D)||D<=0||D>=Math.PI||Ls<0){$("hres").innerHTML=msg("Check speed, emax, R, Δ (0 to 180°), spiral and lane inputs.");$("hchk").innerHTML=$("hsp").innerHTML=$("hspn").innerHTML="";return}
+  const fm=fo>0?fo:fAt(V),Rmin=V*V/(127*(em+fm)),eN=V*V/(127*R)-fm,eA=Math.min(em,Math.max(eN,cf)),fd=V*V/(127*R)-eA,Lr=w*n*eA/dg,Lt=eA>cf?Lr*cf/eA:0;
+  $("hres").innerHTML=cards([["Side friction f used",f(fm,3)],["Minimum radius Rmin",f(Rmin,0)+" m"],["e needed (full f used)",f(Math.max(eN,0)*100,1)+" %"],["Adopted e",f(eA*100,1)+" %"],
+    ["Friction demand",f(Math.max(fd,0),3)],["Runoff length Lr",f(Lr,1)+" m"],["Tangent runout Lt",f(Lt,1)+" m"]]);
+  $("hchk").innerHTML=`R vs Rmin: ${bd(R>=Rmin-1e-9,"ADEQUATE","BELOW MINIMUM")} Friction: ${bd(fd<=fm+1e-9,"WITHIN LIMIT","EXCEEDS LIMIT")}<div class="note">Runoff Lr = lane width × lanes rotated × e / relative gradient. Tangent runout removes the adverse crossfall.</div>`;
+  if(Ls<=0){$("hsp").innerHTML=cards([["Tangent length T",f(R*Math.tan(D/2))+" m"],["Arc length L",f(R*D)+" m"],["External distance E",f(R*(1/Math.cos(D/2)-1))+" m"]]);$("hspn").textContent="Simple circular curve, no spiral.";return}
+  const ts=Ls/(2*R),Xs=Ls*(1-ts*ts/10+Math.pow(ts,4)/216),Ys=Ls*(ts/3-Math.pow(ts,3)/42+Math.pow(ts,5)/1320),p=Ys-R*(1-Math.cos(ts)),k=Xs-R*Math.sin(ts),Dc=D-2*ts;
+  if(Dc<0){$("hsp").innerHTML=msg("Spiral too long: 2θs exceeds Δ. Shorten Ls or increase Δ.");$("hspn").textContent="";return}
+  const Lmin=.0214*V*V*V/(R*Cc);
+  $("hsp").innerHTML=cards([["Spiral angle θs",dms(ts/rad)],["Shift p",f(p,3)+" m"],["k",f(k,3)+" m"],["Xs, Ys",f(Xs,2)+", "+f(Ys,3)],["Tangent length Ts",f((R+p)*Math.tan(D/2)+k)+" m"],["External Es",f((R+p)/Math.cos(D/2)-R)+" m"],
+    ["Circular arc Lc",f(R*Dc)+" m"],["Total length",f(R*Dc+2*Ls)+" m"],["Min Ls (comfort)",f(Lmin,1)+" m"],["Ls vs minimum",Ls>=Lmin?"Adequate":"Too short"]]);
+  $("hspn").textContent=Ls<Lr?"Ls is shorter than the runoff length. Many agencies match the two, so consider lengthening the spiral.":"Ls covers the runoff length."}
+bind("hgh",hz);
+
+/* ---------- Vertical curves ---------- */
+$("hgv").innerHTML=C("Vertical curve",`<div class="grid">${F("vC","PVI chainage (m)",1250)}${F("vE","PVI elevation (m)",100)}${F("vG1","Entry grade g1 (%)",2.5)}${F("vG2","Exit grade g2 (%)",-1.5)}${F("vL","Curve length L (m)",160)}${F("vV","Design speed (km/h)",80)}${F("vI","Station interval (m)",20)}</div>
+<div class="note">SSD for the length check uses 2.5 s reaction time and 3.4 m/s² on a level grade. Crest: eye 1.08 m, object 0.6 m. Sag: headlight 0.6 m, 1° beam.</div>`)+
+C("Results",`<div class="res" id="vres"></div><div id="vchk" class="mt"></div><div id="vplot" class="mt"></div>`)+C("Elevations",`<div class="sc" id="vtbl"></div>`);
+function vc(){
+  const ch=g("vC"),el=g("vE"),g1=g("vG1"),g2=g("vG2"),L=g("vL"),V=g("vV"),st=g("vI");
+  if(![ch,el,g1,g2].every(isFinite)||!(L>0)||!(V>0)||!(st>0)||g1==g2){$("vres").innerHTML=msg("Enter the PVI, two different grades, L, speed and interval.");["vchk","vplot","vtbl"].forEach(i=>$(i).innerHTML="");return}
+  const A=g2-g1,Aa=Math.abs(A),crest=A<0,K=L/Aa,B=ch-L/2,E=ch+L/2,yB=el-g1/100*L/2,yE=el+g2/100*L/2,Y=x=>yB+g1*x/100+A*x*x/(200*L),
+    xt=-g1*L/A,tp=xt>0&&xt<L,S=ssd(V,2.5,3.4,0),Sd=S.rd+S.br,L1=crest?Aa*Sd*Sd/658:Aa*Sd*Sd/(120+3.5*Sd),
+    Lm=L1>=Sd?L1:Math.max(2*Sd-(crest?658:120+3.5*Sd)/Aa,0),La=.6*V;
+  $("vres").innerHTML=cards([["Type",crest?"Crest":"Sag"],["Algebraic difference A",f(Aa,2)+" %"],["K = L / A",f(K,1)+" m per %"],["SSD used",f(Sd,0)+" m"],["Min L for SSD",f(Lm,1)+" m"],["Min L, appearance (0.6 V)",f(La,0)+" m"],
+    ["BVC",f(B,1)+" m, "+f(yB,3)],["EVC",f(E,1)+" m, "+f(yE,3)],["Curve elevation at PVI",f(Y(L/2),3)+" m"],["Turning point",tp?f(B+xt,1)+" m, "+f(Y(xt),3):"none on curve"]]);
+  $("vchk").innerHTML=`L vs SSD requirement: ${bd(L>=Lm,"ADEQUATE","TOO SHORT")} Appearance: ${bd(L>=La,"OK","SHORT")}`;
+  const ex=L*.25,x0=B-ex,x1=E+ex,t1=x=>yB+g1/100*(x-B),t2=x=>yE+g2/100*(x-E),pts=[];for(let i=0;i<=40;i++){const x=L*i/40;pts.push([B+x,Y(x)])}
+  const ys=pts.map(p=>p[1]).concat([t1(x0),t2(x1)]),mn=Math.min(...ys),mx=Math.max(...ys),W=360,H=200,pl=12,pt=14,pb=24,
+    PX=x=>pl+(x-x0)/(x1-x0)*(W-2*pl),PY=y=>pt+(mx-y)/((mx-mn)||1)*(H-pt-pb),dot=(x,y,l,dx)=>`<circle cx="${PX(x)}" cy="${PY(y)}" r="4" fill="var(--c2)"/><text x="${PX(x)+dx}" y="${PY(y)-8}" font-size="11" fill="var(--tx)" text-anchor="middle">${l}</text>`;
+  $("vplot").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img"><line x1="${PX(x0)}" y1="${PY(t1(x0))}" x2="${PX(ch)}" y2="${PY(el)}" stroke="var(--mut)" stroke-dasharray="5 4"/><line x1="${PX(ch)}" y1="${PY(el)}" x2="${PX(x1)}" y2="${PY(t2(x1))}" stroke="var(--mut)" stroke-dasharray="5 4"/>
+  <path d="${pts.map((p,i)=>(i?"L":"M")+PX(p[0]).toFixed(1)+","+PY(p[1]).toFixed(1)).join("")}" fill="none" stroke="var(--c1)" stroke-width="2.5"/>
+  ${dot(B,yB,"BVC",0)}${dot(E,yE,"EVC",0)}${dot(ch,el,"PVI",0)}${tp?dot(B+xt,Y(xt),crest?"high":"low",0):""}
+  <text x="${W/2}" y="${H-6}" font-size="11" fill="var(--mut)" text-anchor="middle">Vertical scale exaggerated</text></svg>`;
+  let h='<table><tr><th>Chainage</th><th>Tangent</th><th>Offset</th><th>Curve RL</th><th>Grade %</th></tr>';
+  const rows=[B];for(let c=(Math.floor(B/st+1e-9)+1)*st;c<E-1e-9;c+=st)rows.push(c);rows.push(E);
+  rows.forEach(c=>{const x=c-B;h+=`<tr><td>${f(c,1)}</td><td>${f(yB+g1*x/100,3)}</td><td>${f(A*x*x/(200*L),3)}</td><td>${f(Y(x),3)}</td><td>${f(g1+A*x/L,2)}</td></tr>`});
+  $("vtbl").innerHTML=h+"</table>"}
+bind("hgv",vc);
+
+$("tabs").onclick=e=>{const t=e.target.dataset.t;if(!t)return;
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b===e.target));
+  ["hgs","hgh","hgv"].forEach(s=>$(s).hidden=s!=t)};
+ss();hz();vc();
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Steel and Timber Member Checks</title>
+<style>
+:root{--bg:#f3f5f7;--card:#fff;--tx:#1b1f23;--mut:#646c75;--bd:#d8dee4;--ac:#3a5878;--ok:#1f7a4d;--bad:#b3261e;--c1:#2563a8;--c2:#b8470f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121518;--card:#1b2024;--tx:#ebeff3;--mut:#98a2ad;--bd:#323a42;--ac:#8fb5dc;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121518;--card:#1b2024;--tx:#ebeff3;--mut:#98a2ad;--bd:#323a42;--ac:#8fb5dc;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:700px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+p.sub{color:var(--mut);margin:0 0 12px;font-size:14px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+.tabs button{white-space:nowrap}
+.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+@media (prefers-color-scheme:dark){.tabs button.on{color:#0b1520}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select{width:100%;font:inherit;padding:9px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx)}
+button{font:inherit;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:9px;padding:8px 12px}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.r{border:1px solid var(--bd);border-radius:10px;padding:8px 10px}
+.r b{display:block;font-size:17px}.r span{font-size:12px;color:var(--mut)}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor;margin-right:4px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.note{font-size:12px;color:var(--mut);margin-top:6px}.mt{margin-top:10px}
+</style>
+<link rel="stylesheet" href="structaviz-tools.css">
+<script src="structaviz-tools.js"></script>
+</head>
+<body>
+<main>
+<h1>Steel and Timber Member Checks</h1>
+<p class="sub">Eurocode-style resistance checks. Units: m, kN, N/mm², and section properties in cm.</p>
+<div class="tabs" id="tabs"><button data-t="msb" class="on">Steel beam</button><button data-t="msc">Steel column</button><button data-t="mtb">Timber beam</button><button data-t="mpr">Section properties</button></div>
+<section id="msb"></section><section id="msc" hidden></section><section id="mtb" hidden></section><section id="mpr" hidden></section>
+</main>
+<script>
+const $=id=>document.getElementById(id),g=id=>parseFloat($(id).value),
+f=(x,n=2)=>(Math.abs(x)<5*Math.pow(10,-n-1)?0:x).toFixed(n),
+cards=a=>a.map(r=>`<div class="r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join(""),
+bd=(ok,a,b)=>`<span class="badge ${ok?"ok":"bad"}">${ok?a:b}</span>`,
+msg=t=>`<div class="r" style="grid-column:1/3"><span>Check your inputs</span><b>${t}</b></div>`,
+F=(id,l,v)=>`<div><label>${l}</label><input id="${id}" type="number" step="any" value="${v}"></div>`,
+S=(id,l,o,d)=>`<div><label>${l}</label><select id="${id}">${o.map(x=>`<option value="${x[0]}"${x[0]==d?" selected":""}>${x[1]}</option>`).join("")}</select></div>`,
+C=(h,b)=>`<div class="card"><h2>${h}</h2>${b}</div>`,
+bind=(s,fn)=>{$(s).addEventListener("input",fn);$(s).addEventListener("change",fn)},
+ut=(u)=>f(u*100,0)+" %";
+
+/* ---------- Steel beam ---------- */
+$("msb").innerHTML=C("Beam and loads (simply supported, fully restrained)",`<div class="grid">${F("bL","Span L (m)",6)}${F("bGk","Permanent UDL gk (kN/m)",8)}${F("bQk","Variable UDL qk (kN/m)",10)}${F("bPg","Permanent mid-span point Gk (kN)",0)}${F("bPq","Variable mid-span point Qk (kN)",0)}
+${F("bYg","γG",1.35)}${F("bYq","γQ",1.5)}</div>`)+
+C("Section and material",`<div class="grid">${F("bW","Plastic modulus Wpl (cm³)",623)}${F("bI","Second moment I (cm⁴)",8503)}${F("bH","Section depth h (mm)",303)}${F("bTw","Web thickness tw (mm)",6)}${F("bFy","Yield strength fy (N/mm²)",275)}${F("bE","E (GPa)",210)}
+${F("bD1","Total deflection limit L /",250)}${F("bD2","Variable deflection limit L /",360)}</div><div class="note">Defaults approximate a 305 × 165 × 40 UB. Shear area is taken as h × tw, which is conservative. Class 1 or 2 section assumed. Lateral torsional buckling is not checked, so the compression flange must be restrained.</div>`)+
+C("Results",`<div class="res" id="bres"></div><div id="bchk" class="mt"></div>`);
+function sb(){
+  const L=g("bL"),gk=g("bGk")||0,qk=g("bQk")||0,Gk=g("bPg")||0,Qk=g("bPq")||0,yg=g("bYg"),yq=g("bYq"),W=g("bW"),I=g("bI"),h=g("bH"),tw=g("bTw"),fy=g("bFy"),E=g("bE")*1000,d1=g("bD1"),d2=g("bD2");
+  if(![L,W,I,h,tw,fy,E,yg,yq,d1,d2].every(x=>x>0)||gk<0||qk<0||Gk<0||Qk<0||gk+qk+Gk+Qk==0){$("bres").innerHTML=msg("Positive span, section properties and factors, with at least one load.");$("bchk").innerHTML="";return}
+  const w=yg*gk+yq*qk,P=yg*Gk+yq*Qk,M=w*L*L/8+P*L/4,V=w*L/2+P/2,Mc=W*1e3*fy/1e6,Vc=h*tw*fy/Math.sqrt(3)/1e3,EI=E*I*1e4,Lm=L*1000,
+    dl=(wk,Pk)=>5*wk*Math.pow(Lm,4)/(384*EI)+Pk*1000*Math.pow(Lm,3)/(48*EI),dT=dl(gk+qk,Gk+Qk),dV=dl(qk,Qk);
+  $("bres").innerHTML=cards([["Design moment MEd",f(M,1)+" kN·m"],["Moment resistance Mc,Rd",f(Mc,1)+" kN·m"],["Design shear VEd",f(V,1)+" kN"],["Shear resistance Vc,Rd",f(Vc,1)+" kN"],
+    ["Bending utilisation",ut(M/Mc)],["Shear utilisation",ut(V/Vc)],["Total deflection",f(dT,1)+" mm (limit "+f(Lm/d1,1)+")"],["Variable deflection",f(dV,1)+" mm (limit "+f(Lm/d2,1)+")"]]);
+  $("bchk").innerHTML=`${bd(M<=Mc,"BENDING OK","BENDING FAILS")}${bd(V<=Vc,"SHEAR OK","SHEAR FAILS")}${bd(dT<=Lm/d1,"TOTAL DEFLECTION OK","TOTAL DEFLECTION EXCEEDED")}${bd(dV<=Lm/d2,"VARIABLE DEFLECTION OK","VARIABLE DEFLECTION EXCEEDED")}${V>.5*Vc?'<div class="note">VEd exceeds 50% of Vc,Rd, so the moment resistance should be reduced for shear. That reduction is not applied here.</div>':""}`}
+bind("msb",sb);
+
+/* ---------- Steel column ---------- */
+const AL={a0:.13,a:.21,b:.34,c:.49,d:.76};
+$("msc").innerHTML=C("Column (flexural buckling, EN 1993-1-1)",`<div class="grid">${F("cN","Design axial load NEd (kN)",800)}${F("cL","Column length L (m)",4)}${F("cK","Effective length factor k",1)}${F("cA","Area A (cm²)",76.4)}${F("cI","I about buckling axis (cm⁴)",2065)}${F("cF","Yield strength fy (N/mm²)",275)}${F("cE","E (GPa)",210)}
+${S("cC","Buckling curve",[["a0","a0"],["a","a"],["b","b"],["c","c"],["d","d"]],"c")}${F("cM","γM1",1)}</div><div class="note">Use I about the weaker axis unless it is braced. Defaults approximate a 203 × 203 × 60 UC about its weak axis (curve c). Choose the curve from the code table for your section type and axis.</div>`)+
+C("Results",`<div class="res" id="cres"></div><div id="cchk" class="mt"></div>`);
+function sc(){
+  const N=g("cN"),L=g("cL"),k=g("cK"),A=g("cA"),I=g("cI"),fy=g("cF"),E=g("cE")*1000,a=AL[$("cC").value],gm=g("cM");
+  if(![N,L,k,A,I,fy,E,gm].every(x=>x>0)){$("cres").innerHTML=msg("All inputs must be above 0.");$("cchk").innerHTML="";return}
+  const Lc=k*L*1000,Ncr=Math.PI*Math.PI*E*I*1e4/(Lc*Lc),lb=Math.sqrt(A*100*fy/Ncr),ph=.5*(1+a*(lb-.2)+lb*lb),chi=Math.min(1,1/(ph+Math.sqrt(ph*ph-lb*lb))),Nb=chi*A*100*fy/gm/1e3,Npl=A*100*fy/1e3,i=Math.sqrt(I*1e4/(A*100));
+  $("cres").innerHTML=cards([["Effective length",f(Lc/1000,2)+" m"],["Slenderness L/i",f(Lc/i,0)],["Euler load Ncr",f(Ncr/1e3,0)+" kN"],["Relative slenderness",f(lb,3)],["Reduction factor χ",f(Math.min(chi,1),3)],["Squash load",f(Npl,0)+" kN"],["Buckling resistance",f(Nb,0)+" kN"],["Utilisation",ut(N/Nb)]]);
+  $("cchk").innerHTML=`${bd(N<=Nb,"COLUMN OK","COLUMN FAILS")}${bd(Lc/i<=180,"SLENDERNESS WITHIN 180","VERY SLENDER")}<div class="note">Axial load only. Add bending interaction checks for beam-columns.</div>`}
+bind("msc",sc);
+
+/* ---------- Timber beam ---------- */
+const TC={C16:[16,3.2,8000,"s"],C24:[24,4,11000,"s"],C30:[30,4,12000,"s"],GL24h:[24,3.5,11500,"g"],GL28h:[28,3.5,12600,"g"]};
+$("mtb").innerHTML=C("Beam and loads (simply supported)",`<div class="grid">${F("tB","Breadth b (mm)",75)}${F("tH","Depth h (mm)",225)}${F("tL","Span L (m)",4)}${F("tG","Permanent UDL gk (kN/m)",0.8)}${F("tQ","Variable UDL qk (kN/m)",1.5)}
+${S("tC","Strength class",Object.keys(TC).map(k=>[k,k]),"C24")}${S("tK","Load duration (kmod, service class 1)",[[.6,"Permanent (0.60)"],[.7,"Long-term (0.70)"],[.8,"Medium-term (0.80)"],[.9,"Short-term (0.90)"],[1.1,"Instantaneous (1.10)"]],.8)}
+${F("tM","γM (1.3 solid, 1.25 glulam)",1.3)}${F("tKc","Shear width factor kcr",0.67)}${F("tKd","kdef",0.6)}${F("tPs","ψ2",0.3)}${F("tD1","Variable instant. limit L /",300)}${F("tD2","Final deflection limit L /",150)}</div>
+<div class="note">Strength values are characteristic EN 338 and EN 14080 values. Bearing, lateral stability and notches are not checked.</div>`)+C("Results",`<div class="res" id="tres"></div><div id="tchk" class="mt"></div>`);
+function tb(){
+  const b=g("tB"),h=g("tH"),L=g("tL"),gk=g("tG")||0,qk=g("tQ")||0,c=TC[$("tC").value],km=+$("tK").value,gm=g("tM"),kc=g("tKc"),kd=g("tKd"),ps=g("tPs"),d1=g("tD1"),d2=g("tD2");
+  if(![b,h,L,gm,kc,d1,d2].every(x=>x>0)||gk+qk<=0||kd<0||ps<0){$("tres").innerHTML=msg("Positive section, span, factors and at least one load.");$("tchk").innerHTML="";return}
+  const kh=c[3]=="s"?(h<150?Math.min(1.3,Math.pow(150/h,.2)):1):(h<600?Math.min(1.1,Math.pow(600/h,.1)):1),w=1.35*gk+1.5*qk,M=w*L*L/8,V=w*L/2,W=b*h*h/6,
+    sm=M*1e6/W,fm=km*kh*c[0]/gm,tau=1.5*V*1e3/(kc*b*h),fv=km*c[1]/gm,Lm=L*1000,EI=c[2]*b*Math.pow(h,3)/12,wi=x=>5*x*Math.pow(Lm,4)/(384*EI),wg=wi(gk),wq=wi(qk),wf=wg*(1+kd)+wq*(1+ps*kd);
+  $("tres").innerHTML=cards([["Bending stress σm,d",f(sm,1)+" N/mm²"],["Bending strength fm,d",f(km*kh*c[0]/gm,1)+" N/mm² (kh "+f(kh,2)+")"],["Shear stress τd",f(tau,2)+" N/mm²"],["Shear strength fv,d",f(fv,2)+" N/mm²"],
+    ["Bending utilisation",ut(sm/fm)],["Shear utilisation",ut(tau/fv)],["Variable, instantaneous",f(wq,1)+" mm (limit "+f(Lm/d1,1)+")"],["Final deflection",f(wf,1)+" mm (limit "+f(Lm/d2,1)+")"]]);
+  $("tchk").innerHTML=`${bd(sm<=fm,"BENDING OK","BENDING FAILS")}${bd(tau<=fv,"SHEAR OK","SHEAR FAILS")}${bd(wq<=Lm/d1,"INSTANT. DEFLECTION OK","INSTANT. DEFLECTION EXCEEDED")}${bd(wf<=Lm/d2,"FINAL DEFLECTION OK","FINAL DEFLECTION EXCEEDED")}`}
+bind("mtb",tb);
+
+/* ---------- Section properties ---------- */
+$("mpr").innerHTML=C("Section",`<div class="grid">${S("pS","Shape",[["rect","Solid rectangle"],["circ","Solid circle"],["rhs","Rectangular hollow"],["isec","I-section (no root radius)"]])}
+${F("pB","Breadth b or B (mm)",200)}${F("pH","Depth h or H (mm)",300)}${F("pT","Wall or flange thickness t or tf (mm)",12)}${F("pW","Web thickness tw (mm)",8)}</div>
+<div class="note">Circle uses breadth as the diameter. For I-sections, tf is the flange thickness and tw the web thickness.</div>`)+C("Properties",`<div class="res" id="pres"></div>`);
+function pr(){
+  const s=$("pS").value,B=g("pB"),H=g("pH"),t=g("pT"),tw=g("pW");let A,Ix,Iy,Zx,Pl,dx,dy;
+  if(!(B>0)||(s!="circ"&&!(H>0))){$("pres").innerHTML=msg("Enter positive dimensions.");return}
+  if(s=="rect"){A=B*H;Ix=B*H**3/12;Iy=H*B**3/12;Pl=B*H*H/4;dx=H;dy=B}
+  else if(s=="circ"){A=Math.PI*B*B/4;Ix=Iy=Math.PI*B**4/64;Pl=B**3/6;dx=dy=B}
+  else if(s=="rhs"){if(!(t>0)||2*t>=Math.min(B,H)){$("pres").innerHTML=msg("Wall thickness must be below half of each side.");return}
+    A=B*H-(B-2*t)*(H-2*t);Ix=(B*H**3-(B-2*t)*(H-2*t)**3)/12;Iy=(H*B**3-(H-2*t)*(B-2*t)**3)/12;Pl=B*H*H/4-(B-2*t)*(H-2*t)**2/4;dx=H;dy=B}
+  else{if(!(t>0)||!(tw>0)||2*t>=H||tw>=B){$("pres").innerHTML=msg("Check tf, tw and the overall size.");return}
+    A=2*B*t+(H-2*t)*tw;Ix=(B*H**3-(B-tw)*(H-2*t)**3)/12;Iy=(2*t*B**3+(H-2*t)*tw**3)/12;Pl=B*t*(H-t)+tw*(H-2*t)**2/4;dx=H;dy=B}
+  const c2=x=>f(x/100,2),c4=x=>f(x/1e4,1),c3=x=>f(x/1e3,1);
+  $("pres").innerHTML=cards([["Area A",c2(A)+" cm²"],["Ixx",c4(Ix)+" cm⁴"],["Iyy",c4(Iy)+" cm⁴"],["Elastic modulus Wel,x",c3(Ix/(dx/2))+" cm³"],["Elastic modulus Wel,y",c3(Iy/(dy/2))+" cm³"],["Plastic modulus Wpl,x",c3(Pl)+" cm³"],
+    ["Radius of gyration ix",f(Math.sqrt(Ix/A)/10,2)+" cm"],["Radius of gyration iy",f(Math.sqrt(Iy/A)/10,2)+" cm"]])}
+bind("mpr",pr);
+
+$("tabs").onclick=e=>{const t=e.target.dataset.t;if(!t)return;
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b===e.target));
+  ["msb","msc","mtb","mpr"].forEach(s=>$(s).hidden=s!=t)};
+sb();sc();tb();pr();
+</script>
+</body>
+</html>

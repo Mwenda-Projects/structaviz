@@ -465,6 +465,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   .topbar{padding:10px 14px;}
   .topbar-right .pill{display:none;}
   .topbar-right .pill.kenya{display:inline-flex;}
+  .topbar-right .pill.tools-pill{display:inline-flex;}
 
   /* Cost */
   .cost-grid{grid-template-columns:1fr 1fr;}

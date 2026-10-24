@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Survey Calculator</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#6b6a64;--bd:#dedcd4;--ac:#b8470f;--ok:#1f7a4d;--bad:#b3261e;--c1:#2563a8;--c2:#b8470f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161614;--card:#211f1c;--tx:#f0eee8;--mut:#a29f95;--bd:#38352f;--ac:#f0894f;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161614;--card:#211f1c;--tx:#f0eee8;--mut:#a29f95;--bd:#38352f;--ac:#f0894f;--ok:#5fd39a;--bad:#ff8a80;--c1:#6fa8e8;--c2:#f0894f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:700px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+p.sub{color:var(--mut);margin:0 0 12px;font-size:14px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+.tabs button{white-space:nowrap}
+.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select{width:100%;font:inherit;padding:9px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx)}
+.row{display:grid;gap:6px;margin-bottom:6px;align-items:center}
+.k2{grid-template-columns:44px 1fr 1fr 36px}.k4{grid-template-columns:1.2fr 1fr 1fr 1fr 36px}
+.row .n{font-size:13px;color:var(--mut)}
+.hd{font-size:12px;color:var(--mut)}
+button{font:inherit;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:9px;padding:8px 12px}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.r{border:1px solid var(--bd);border-radius:10px;padding:8px 10px}
+.r b{display:block;font-size:17px}.r span{font-size:12px;color:var(--mut)}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:600}
+svg{width:100%;height:auto;display:block}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+.mt{margin-top:10px}
+</style>
+<link rel="stylesheet" href="structaviz-tools.css">
+<script src="structaviz-tools.js"></script>
+</head>
+<body>
+<main>
+<h1>Survey Calculator</h1>
+<p class="sub">Traverse adjustment, levelling, curve setting out and coordinate geometry.</p>
+<div class="tabs" id="tabs"><button data-t="tv" class="on">Traverse</button><button data-t="lv">Levelling</button><button data-t="cv">Curve</button><button data-t="cg">Coordinates</button></div>
+
+<section id="tv">
+<div class="card"><h2>Setup</h2><div class="grid">
+<div><label>Start Easting (m)</label><input id="E0" type="number" value="1000" step="any"></div>
+<div><label>Start Northing (m)</label><input id="N0" type="number" value="1000" step="any"></div>
+<div><label>Traverse type</label><select id="type"><option value="loop">Closed loop</option><option value="link">Link to known end point</option></select></div>
+<div><label>Observations</label><select id="mode"><option value="brg">Bearings and distances</option><option value="ang">Interior angles and distances</option></select></div>
+<div><label>Adjustment</label><select id="adj"><option value="bow">Bowditch (compass)</option><option value="tra">Transit</option></select></div>
+<div><label>Scale factor (ground to grid)</label><input id="csf" type="number" value="1" step="any"></div>
+<div><label>Required precision (1 : X)</label><input id="req" type="number" value="5000" step="500"></div>
+<div class="lk" hidden><label>End Easting (m)</label><input id="tE" type="number" value="1100" step="any"></div>
+<div class="lk" hidden><label>End Northing (m)</label><input id="tN" type="number" value="1000" step="any"></div>
+<div class="an" hidden><label>First leg bearing</label><input id="fb" value="45 00 00"></div>
+<div class="an" hidden><label>Traverse direction</label><select id="dir"><option value="cw">Clockwise</option><option value="acw">Anticlockwise</option></select></div>
+<div class="an" hidden><label>Angle tolerance k (″ per √n)</label><input id="k" type="number" value="30" step="any"></div>
+</div></div>
+<div class="card"><h2>Observations</h2>
+<div class="row k2 hd"><span>Leg</span><span id="h1">Whole circle bearing</span><span>Distance (m)</span><span></span></div>
+<div id="rows"></div><button id="add">+ Add leg</button>
+<div class="note">Angles and bearings: decimal degrees (45.5) or degrees minutes seconds (45 30 00). In angle mode the first row’s angle is used only for the angle sum check of a closed loop. Link traverses with angles are not angle-adjusted.</div></div>
+<div class="card"><h2>Closure</h2><div class="res" id="tres"></div><div id="tchk" class="mt"></div><button id="cp" class="mt">Copy as CSV</button></div>
+<div class="card"><h2>Plot</h2><div id="plot"></div><div class="note">Solid: adjusted. Dashed: raw. The raw gap is the closing error, not to scale.</div></div>
+<div class="card"><h2>Adjusted coordinates</h2><div class="sc" id="tbl"></div></div>
+</section>
+
+<section id="lv" hidden>
+<div class="card"><h2>Levelling (rise and fall)</h2><div class="grid">
+<div><label>Start RL (m)</label><input id="rl0" type="number" value="100" step="any"></div>
+<div><label>Known closing RL (m, optional)</label><input id="rle" type="number" value="100.02" step="any"></div>
+<div><label>Route length K (km)</label><input id="K" type="number" value="0.4" step="any"></div>
+<div><label>Allowable: c√K (c in mm)</label><input id="cc" type="number" value="12" step="any"></div></div>
+<div class="row k4 hd mt"><span>Point</span><span>BS</span><span>IS</span><span>FS</span><span></span></div>
+<div id="vrows"></div><button id="vadd">+ Add row</button>
+<div class="note">A change point has both FS and BS on the same row. Readings in metres.</div></div>
+<div class="card"><h2>Reduction</h2><div id="lchk"></div><div class="sc mt" id="ltbl"></div></div>
+</section>
+
+<section id="cv" hidden>
+<div class="card"><h2>Simple circular curve</h2><div class="grid">
+<div><label>Deflection angle Δ</label><input id="cD" value="40 00 00"></div>
+<div><label>Radius R (m)</label><input id="cR" type="number" value="200" step="any"></div>
+<div><label>Chainage of IP (m)</label><input id="cCh" type="number" value="1234.56" step="any"></div>
+<div><label>Peg interval (m)</label><input id="cS" type="number" value="20" step="any"></div></div>
+<div class="res mt" id="cres"></div></div>
+<div class="card"><h2>Setting out (deflection angles from TC)</h2><div class="sc" id="ctbl"></div></div>
+</section>
+
+<section id="cg" hidden>
+<div class="card"><h2>Join (inverse)</h2><div class="grid">
+<div><label>A Easting</label><input id="jE1" type="number" value="1000" step="any"></div>
+<div><label>A Northing</label><input id="jN1" type="number" value="1000" step="any"></div>
+<div><label>B Easting</label><input id="jE2" type="number" value="1120.5" step="any"></div>
+<div><label>B Northing</label><input id="jN2" type="number" value="1085.25" step="any"></div></div>
+<div class="res mt" id="jres"></div></div>
+<div class="card"><h2>Polar (forward)</h2><div class="grid">
+<div><label>From Easting</label><input id="pE" type="number" value="1000" step="any"></div>
+<div><label>From Northing</label><input id="pN" type="number" value="1000" step="any"></div>
+<div><label>Bearing</label><input id="pB" value="60 30 00"></div>
+<div><label>Distance (m)</label><input id="pD" type="number" value="150" step="any"></div></div>
+<div class="res mt" id="pres"></div></div>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id),g=id=>parseFloat($(id).value),rad=Math.PI/180,
+f=(x,n=3)=>(Math.abs(x)<5*Math.pow(10,-n-1)?0:x).toFixed(n),
+cards=a=>a.map(r=>`<div class="r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join(""),
+bd=(ok,a,b)=>`<span class="badge ${ok?"ok":"bad"}">${ok?a:b}</span>`,
+msg=t=>`<div class="r" style="grid-column:1/3"><span>Check your inputs</span><b>${t}</b></div>`,
+chn=c=>Math.floor(c/1000)+"+"+(c%1000).toFixed(3).padStart(7,"0");
+function parseAng(s){const m=String(s).match(/-?\d+(\.\d+)?/g);if(!m)return NaN;return parseFloat(m[0])+(m[1]?m[1]/60:0)+(m[2]?m[2]/3600:0)}
+function dms(a){a=(a%360+360)%360;const t=Math.round(a*3600)%1296000,m=Math.floor(t%3600/60);return Math.floor(t/3600)+"° "+String(m).padStart(2,"0")+"′ "+String(t%60).padStart(2,"0")+"″"}
+function rowsUI(el,arr,keys,lead,min,cb){
+  const draw=()=>{const K=keys();el.innerHTML=arr.map((r,i)=>`<div class="row k${K.length==2?2:4}">${lead(i)}${K.map(k=>`<input data-i="${i}" data-k="${k}" value="${r[k]}">`).join("")}<button data-del="${i}" aria-label="Remove">×</button></div>`).join("")};
+  el.oninput=e=>{const i=e.target.dataset.i;if(i!==undefined){arr[i][e.target.dataset.k]=e.target.value;cb()}};
+  el.onclick=e=>{const i=e.target.dataset.del;if(i!==undefined&&arr.length>min){arr.splice(+i,1);draw();cb()}};
+  draw();return draw}
+async function copy(t,b){let ok=false;try{await navigator.clipboard.writeText(t);ok=true}catch(e){const a=document.createElement("textarea");a.value=t;document.body.append(a);a.select();try{ok=document.execCommand("copy")}catch(x){}a.remove()}
+  b.textContent=ok?"Copied":"Copy blocked here";setTimeout(()=>b.textContent="Copy as CSV",1600)}
+
+/* ---------- Traverse ---------- */
+const T=[{b:"45 00 00",a:"90 00 10",d:"100.02"},{b:"135 00 30",a:"89 59 50",d:"99.98"},{b:"225 00 00",a:"90 00 20",d:"100.03"},{b:"315 00 00",a:"90 00 00",d:"100.00"}];
+let csv="";
+const tKeys=()=>$("mode").value=="ang"?["a","d"]:["b","d"];
+const tLead=i=>{const n=T.length,l=$("type").value=="loop"?(i+1)%n+1:i+2;return `<span class="n">${i+1}-${l}</span>`};
+const tDraw=rowsUI($("rows"),T,tKeys,tLead,2,()=>trav());
+function trav(){
+  const n=T.length,E0=g("E0")||0,N0=g("N0")||0,csf=g("csf")||1,loop=$("type").value=="loop",ang=$("mode").value=="ang",tr=$("adj").value=="tra",
+    D=T.map(l=>parseFloat(l.d)*csf);let th,ai=null;
+  if(ang){const A=T.map(l=>parseAng(l.a)),cw=$("dir").value=="cw";let c=0;
+    if(loop){const m=A.reduce((s,x)=>s+x,0)-(n-2)*180;ai={m:m*3600,al:(g("k")||30)*Math.sqrt(n)};c=-m/n}
+    th=[parseAng($("fb").value)];for(let i=1;i<n;i++)th.push(th[i-1]+180+(cw?-1:1)*(A[i]+c));
+  }else th=T.map(l=>parseAng(l.b));
+  if(D.concat(th).some(x=>!isFinite(x))){$("tres").innerHTML=msg("Every leg needs a valid angle or bearing and a distance.");["tchk","plot","tbl"].forEach(i=>$(i).innerHTML="");return}
+  const L=th.map((t,i)=>{t=(t%360+360)%360;return{t,D:D[i],dN:D[i]*Math.cos(t*rad),dE:D[i]*Math.sin(t*rad)}}),
+    sD=L.reduce((s,l)=>s+l.D,0),sN=L.reduce((s,l)=>s+Math.abs(l.dN),0),sE=L.reduce((s,l)=>s+Math.abs(l.dE),0),
+    tE=loop?E0:(g("tE")||0),tN=loop?N0:(g("tN")||0),
+    eE=E0+L.reduce((s,l)=>s+l.dE,0)-tE,eN=N0+L.reduce((s,l)=>s+l.dN,0)-tN,
+    lin=Math.hypot(eE,eN),prec=lin>1e-9?sD/lin:Infinity,req=g("req")||5000,R=[[E0,N0]],A=[[E0,N0]];
+  L.forEach(l=>{l.cE=l.dE-eE*(tr?Math.abs(l.dE)/(sE||1):l.D/sD);l.cN=l.dN-eN*(tr?Math.abs(l.dN)/(sN||1):l.D/sD);
+    const r=R[R.length-1],a=A[A.length-1];R.push([r[0]+l.dE,r[1]+l.dN]);A.push([a[0]+l.cE,a[1]+l.cN])});
+  let ar=0;if(loop)for(let i=0;i<n;i++){const p=A[i],q=A[(i+1)%n];ar+=p[0]*q[1]-q[0]*p[1]}ar=Math.abs(ar)/2;
+  const rs=[["Error in ΔE",f(eE,4)+" m"],["Error in ΔN",f(eN,4)+" m"],["Linear misclosure",f(lin,4)+" m"],["Total length",f(sD)+" m"],
+    ["Precision",prec==Infinity?"Perfect":"1 : "+Math.round(prec)],["Closing line bearing",lin>1e-9?dms(Math.atan2(-eE,-eN)/rad):"n/a"]];
+  if(ai)rs.push(["Angular misclosure",f(ai.m,0)+"″"],["Allowable k√n",f(ai.al,0)+"″"]);
+  if(loop)rs.push(["Area",f(ar,2)+" m²"],["Area (hectares)",f(ar/1e4,4)+" ha"]);
+  $("tres").innerHTML=cards(rs);
+  $("tchk").innerHTML=`Precision vs 1 : ${req}: ${bd(prec>=req,"ACCEPTABLE","REMEASURE")}`+(ai?`<br>Angles: ${bd(Math.abs(ai.m)<=ai.al,"WITHIN TOLERANCE","EXCEEDS TOLERANCE")}`:"")+
+    `<div class="note">${tr?"Transit: corrections in proportion to |ΔE| and |ΔN|.":"Bowditch: corrections in proportion to leg length."} Scale factor applied to all distances.</div>`;
+  const lab=i=>`${i+1}-${loop?(i+1)%n+1:i+2}`;
+  let t='<table><tr><th>Leg</th><th>Bearing</th><th>Dist</th><th>ΔN</th><th>ΔE</th><th>Corr ΔN</th><th>Corr ΔE</th><th>Easting</th><th>Northing</th></tr>';
+  csv="Leg,Bearing,Distance,dN,dE,CorrdN,CorrdE,Easting,Northing\nStart,,,,,,,"+f(E0,4)+","+f(N0,4);
+  t+=`<tr><td>Start</td><td></td><td></td><td></td><td></td><td></td><td></td><td>${f(E0)}</td><td>${f(N0)}</td></tr>`;
+  L.forEach((l,i)=>{t+=`<tr><td>${lab(i)}</td><td>${dms(l.t)}</td><td>${f(l.D)}</td><td>${f(l.dN)}</td><td>${f(l.dE)}</td><td>${f(l.cN)}</td><td>${f(l.cE)}</td><td>${f(A[i+1][0])}</td><td>${f(A[i+1][1])}</td></tr>`;
+    csv+=`\n${lab(i)},${f(l.t,5)},${f(l.D,4)},${f(l.dN,4)},${f(l.dE,4)},${f(l.cN,4)},${f(l.cE,4)},${f(A[i+1][0],4)},${f(A[i+1][1],4)}`});
+  $("tbl").innerHTML=t+"</table>";
+  const W=360,H=300,pd=28,all=R.concat(A,[[tE,tN]]),es=all.map(p=>p[0]),ns=all.map(p=>p[1]),
+    mE=Math.min(...es),mN=Math.min(...ns),rE=Math.max(...es)-mE||1,rN=Math.max(...ns)-mN||1,s=Math.min((W-2*pd)/rE,(H-2*pd)/rN),
+    ox=(W-rE*s)/2,oy=(H-rN*s)/2,X=e=>ox+(e-mE)*s,Y=v=>H-oy-(v-mN)*s,
+    path=P=>P.map((p,i)=>(i?"L":"M")+X(p[0]).toFixed(1)+","+Y(p[1]).toFixed(1)).join("");
+  let dots="";A.slice(0,loop?n:n+1).forEach((p,i)=>{dots+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4" fill="var(--c1)"/><text x="${X(p[0])+7}" y="${Y(p[1])-7}" font-size="12" fill="var(--tx)">${i+1}</text>`});
+  $("plot").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img"><path d="${path(A)}${loop?"Z":""}" fill="${loop?"var(--c1)":"none"}" fill-opacity=".12" stroke="var(--c1)" stroke-width="2"/>
+  <path d="${path(R)}" fill="none" stroke="var(--c2)" stroke-width="1.5" stroke-dasharray="5 4"/>${dots}
+  ${loop?"":`<circle cx="${X(tE)}" cy="${Y(tN)}" r="7" fill="none" stroke="var(--c2)" stroke-width="2"/>`}
+  <text x="12" y="18" font-size="12" fill="var(--mut)">N ↑</text></svg>`}
+function tSync(){
+  const link=$("type").value=="link",ang=$("mode").value=="ang";
+  document.querySelectorAll(".lk").forEach(e=>e.hidden=!link);document.querySelectorAll(".an").forEach(e=>e.hidden=!ang);
+  $("h1").textContent=ang?"Interior angle at station":"Whole circle bearing";tDraw();trav()}
+["type","mode"].forEach(i=>$(i).onchange=tSync);
+["E0","N0","adj","csf","req","tE","tN","fb","dir","k"].forEach(i=>$(i).oninput=trav);
+$("add").onclick=()=>{T.push({b:"",a:"",d:""});tDraw();trav()};
+$("cp").onclick=e=>copy(csv,e.target);
+
+/* ---------- Levelling ---------- */
+const V=[{p:"BM1",bs:"1.425",is:"",fs:""},{p:"P1",bs:"",is:"1.870",fs:""},{p:"TP1",bs:"1.205",is:"",fs:"0.915"},{p:"P2",bs:"",is:"1.532",fs:""},{p:"BM2",bs:"",is:"",fs:"1.688"}];
+const vDraw=rowsUI($("vrows"),V,()=>["p","bs","is","fs"],()=>"",2,()=>lev());
+$("vadd").onclick=()=>{V.push({p:"",bs:"",is:"",fs:""});vDraw();lev()};
+["rl0","rle","K","cc"].forEach(i=>$(i).oninput=()=>lev());
+function lev(){
+  const x=s=>{const n=parseFloat(s);return isFinite(n)?n:null},rl0=g("rl0")||0,o=[];let pr=null;
+  const bad=()=>{$("lchk").innerHTML=msg("Row 1 needs a BS. Every later row needs an IS or FS, following a row with a BS or IS.");$("ltbl").innerHTML=""};
+  for(let i=0;i<V.length;i++){const r=V[i],bs=x(r.bs),is=x(r.is),fs=x(r.fs);let ri=null,fl=null,rl=rl0;
+    if(i){const cur=is!=null?is:fs;if(cur==null||pr==null)return bad();const d=pr-cur;if(d>=0)ri=d;else fl=-d;rl=o[i-1].rl+d}
+    else if(bs==null)return bad();
+    pr=bs!=null?bs:is;o.push({p:r.p,bs,is,fs,ri,fl,rl})}
+  const sm=k=>o.reduce((s,r)=>s+(r[k]||0),0),sB=sm("bs"),sF=sm("fs"),sR=sm("ri"),sFl=sm("fl"),last=o[o.length-1].rl,
+    arith=Math.abs(sB-sF-(sR-sFl))<1e-6&&Math.abs(sB-sF-(last-rl0))<1e-6,e=parseFloat($("rle").value),has=isFinite(e),
+    mis=has?last-e:0,al=(g("cc")||12)*Math.sqrt(g("K")||0)/1000,S=o.filter(r=>r.fs!=null).length;
+  let c="";if(has)c=`<br>Misclosure ${f(mis*1000,1)} mm, allowable ${f(al*1000,1)} mm: ${bd(Math.abs(mis)<=al,"ACCEPTABLE","REMEASURE")}`;
+  $("lchk").innerHTML=`ΣBS − ΣFS = ${f(sB-sF)} | ΣRise − ΣFall = ${f(sR-sFl)} | Last RL − First RL = ${f(last-rl0)}<br>Arithmetic check: ${bd(arith,"OK","ERROR")}${c}
+  <div class="note">Misclosure is spread equally over the instrument setups (applied at each change point).</div>`;
+  let t='<table><tr><th>Point</th><th>BS</th><th>IS</th><th>FS</th><th>Rise</th><th>Fall</th><th>RL</th><th>Adj RL</th></tr>',fb=0;
+  const v=a=>a==null?"":f(a);
+  o.forEach(r=>{const k=r.fs!=null?fb+1:fb;if(r.fs!=null)fb++;
+    t+=`<tr><td>${r.p}</td><td>${v(r.bs)}</td><td>${v(r.is)}</td><td>${v(r.fs)}</td><td>${v(r.ri)}</td><td>${v(r.fl)}</td><td>${f(r.rl)}</td><td>${has&&S?f(r.rl-mis*k/S):f(r.rl)}</td></tr>`});
+  $("ltbl").innerHTML=t+"</table>"}
+
+/* ---------- Curve ---------- */
+function curve(){
+  const Dl=parseAng($("cD").value)*rad,R=g("cR"),ch=g("cCh"),st=g("cS");
+  if(!(Dl>0&&Dl<Math.PI)||!(R>0)||!isFinite(ch)||!(st>0)){$("cres").innerHTML=msg("Δ must be between 0° and 180°, R and the peg interval above zero.");$("ctbl").innerHTML="";return}
+  const tg=R*Math.tan(Dl/2),Lc=R*Dl,TC=ch-tg,CT=TC+Lc;
+  $("cres").innerHTML=cards([["Tangent length T",f(tg)+" m"],["Curve length L",f(Lc)+" m"],["Long chord C",f(2*R*Math.sin(Dl/2))+" m"],
+    ["External distance E",f(R*(1/Math.cos(Dl/2)-1))+" m"],["Mid-ordinate M",f(R*(1-Math.cos(Dl/2)))+" m"],["Chainage TC",chn(TC)],["Chainage CT",chn(CT)],["Check: δ at CT = Δ/2",dms(Dl/2/rad)]]);
+  const pg=[TC];for(let c=(Math.floor(TC/st+1e-9)+1)*st;c<CT-1e-9;c+=st)pg.push(c);pg.push(CT);
+  let t='<table><tr><th>Chainage</th><th>Arc from TC</th><th>Deflection</th><th>Chord from TC</th><th>Chord from prev</th></tr>';
+  pg.forEach((c,i)=>{const l=c-TC,d=l/(2*R),p=i?(l-(pg[i-1]-TC))/(2*R):0;
+    t+=`<tr><td>${chn(c)}</td><td>${f(l)}</td><td>${dms(d/rad)}</td><td>${f(2*R*Math.sin(d))}</td><td>${i?f(2*R*Math.sin(p)):""}</td></tr>`});
+  $("ctbl").innerHTML=t+'</table><div class="note">Set up at TC, backsight the IP, turn each deflection angle and measure the chord from the previous peg.</div>'}
+["cD","cR","cCh","cS"].forEach(i=>$(i).oninput=curve);
+
+/* ---------- Coordinates ---------- */
+function geo(){
+  const dE=g("jE2")-g("jE1"),dN=g("jN2")-g("jN1"),d=Math.hypot(dE,dN),b=Math.atan2(dE,dN)/rad;
+  $("jres").innerHTML=cards([["Distance A to B",f(d)+" m"],["Bearing A to B",d>0?dms(b):"n/a"],["Back bearing B to A",d>0?dms(b+180):"n/a"],["ΔE, ΔN",f(dE)+", "+f(dN)]]);
+  const pb=parseAng($("pB").value)*rad,pd=g("pD");
+  $("pres").innerHTML=isFinite(pb)&&isFinite(pd)?cards([["Easting B",f(g("pE")+pd*Math.sin(pb))],["Northing B",f(g("pN")+pd*Math.cos(pb))]]):msg("Enter a bearing and distance.")}
+["jE1","jN1","jE2","jN2","pE","pN","pB","pD"].forEach(i=>$(i).oninput=geo);
+
+/* ---------- Tabs ---------- */
+$("tabs").onclick=e=>{const t=e.target.dataset.t;if(!t)return;
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b===e.target));
+  ["tv","lv","cv","cg"].forEach(s=>$(s).hidden=s!=t)};
+tSync();lev();curve();geo();
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap');
+/* StructaViz Tools: shared theme. Loaded after each tool's own styles, so it overrides them.
+   Theme follows the StructaViz app (Dark / Light / Device). */
+
+:root:root:root{
+  --bg:#090c11;--card:#10141c;--tx:#e2e8f0;--mut:#8a99b2;--bd:rgba(150,180,220,.16);
+  --ac:#4fa8ff;--ok:#00c896;--bad:#ff6b6b;--c1:#4fa8ff;--c2:#f97316;--c3:#a78bfa;
+  --on-ac:#071522;--hl:rgba(79,168,255,.07);--grid:rgba(79,168,255,.035);
+  --svz-mono:'Space Mono',ui-monospace,Consolas,monospace;
+  --svz-sans:'Outfit',system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;padding-top:0;
+}
+:root:root:root[data-theme="light"]{
+  --bg:#f1f5f9;--card:#ffffff;--tx:#1e293b;--mut:#526277;--bd:rgba(20,60,110,.16);
+  --ac:#1d6fc4;--ok:#047857;--bad:#dc2626;--c1:#2563eb;--c2:#c2410c;--c3:#4f46e5;
+  --on-ac:#ffffff;--hl:rgba(29,111,196,.06);--grid:rgba(29,111,196,.05);
+  color-scheme:light;
+}
+
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  font-family:var(--svz-sans);background-color:var(--bg);color:var(--tx);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:60px 60px;min-height:100vh;
+}
+::selection{background:var(--ac);color:var(--on-ac)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:6px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:var(--ac)}
+
+/* ---------- Top bar (injected by structaviz-tools.js) ---------- */
+.svz-top{
+  position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 20px;padding-top:calc(10px + env(safe-area-inset-top,0px));
+  background:color-mix(in srgb,var(--card) 88%,transparent);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--bd);
+}
+.svz-brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--tx);min-width:0}
+.svz-ic{width:22px;height:22px;flex:none;background:var(--ac);clip-path:polygon(50% 0%,100% 100%,0% 100%)}
+.svz-name{font:400 13px var(--svz-mono);letter-spacing:2.5px}
+.svz-tag{font:700 9px var(--svz-mono);letter-spacing:1.5px;color:var(--ac);border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);border-radius:20px;padding:2px 8px}
+.svz-nav{display:flex;align-items:center;gap:8px}
+.svz-nav a,.svz-nav button{
+  display:inline-flex;align-items:center;justify-content:center;min-height:36px;min-width:36px;padding:0 12px;
+  border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx);
+  font:600 12px var(--svz-sans);text-decoration:none;cursor:pointer;white-space:nowrap;
+}
+.svz-nav a:hover,.svz-nav button:hover{border-color:var(--ac);color:var(--ac)}
+.svz-nav a.svz-back{background:var(--ac);border-color:var(--ac);color:var(--on-ac)}
+.svz-nav a.svz-back:hover{color:var(--on-ac);filter:brightness(1.08)}
+.svz-nav .sm{display:none}
+@media (max-width:620px){
+  .svz-top{padding-left:12px;padding-right:12px}
+  .svz-tag{display:none}.svz-nav .lg{display:none}.svz-nav .sm{display:inline}
+}
+@media (max-width:380px){.svz-name{display:none}}
+
+/* ---------- Page layout: roomy on desktop, tidy on phones ---------- */
+body main{max-width:1000px;padding:22px 20px 56px}
+h1{font-family:var(--svz-sans);font-weight:600;letter-spacing:-.3px;font-size:clamp(22px,3.4vw,30px)}
+p.sub{max-width:72ch;line-height:1.55}
+.card{border-radius:12px;padding:16px}
+h2{font-family:var(--svz-mono);font-size:11px;letter-spacing:.12em}
+.note{line-height:1.5}
+@media (max-width:600px){body main{padding:14px 12px 44px}.card{padding:12px}}
+@media (min-width:700px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+  .res{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  .res>.r[style*="grid-column"]{grid-column:1/-1!important}
+}
+
+/* ---------- Results, inputs, buttons ---------- */
+.r{border-radius:10px;background:color-mix(in srgb,var(--bg) 55%,transparent)}
+.r b{font-family:var(--svz-mono);font-size:14px;font-weight:700;overflow-wrap:anywhere}
+@media (min-width:700px){.r b{font-size:15px}}
+.badge{letter-spacing:.3px}
+input,select{border-radius:8px;min-height:40px;font-size:16px;transition:border-color .15s,box-shadow .15s}
+td input{min-height:34px}
+@media (min-width:761px){input,select{font-size:14.5px}}
+input:focus,select:focus{border-color:var(--ac);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 22%,transparent)}
+button,a.go{min-height:38px;cursor:pointer;transition:border-color .15s,background .15s,transform .1s}
+button:hover{border-color:var(--ac)}
+button:active,a.go:active{transform:scale(.98)}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.tabs button.on,.chips button.on,a.go,button.p{background:var(--ac);border-color:var(--ac);color:var(--on-ac)!important;font-weight:600}
+.tabs,.chips{scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.tabs::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
+.tabs button,.chips button{min-height:38px}
+tr:hover>td{background:var(--hl)}
+svg text{font-family:var(--svz-sans)}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* ---------- Printing: plain white page, no top bar ---------- */
+@media print{
+  .svz-top{display:none}
+  :root:root:root{--bg:#fff;--card:#fff;--tx:#111;--mut:#555;--bd:#ccc;--hl:transparent;--grid:transparent}
+  body{background-image:none}.card{break-inside:avoid}
+}
