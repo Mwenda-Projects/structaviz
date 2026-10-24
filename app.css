@@ -465,7 +465,6 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   .topbar{padding:10px 14px;}
   .topbar-right .pill{display:none;}
   .topbar-right .pill.kenya{display:inline-flex;}
-  .topbar-right .pill.tools-pill{display:inline-flex;}
 
   /* Cost */
   .cost-grid{grid-template-columns:1fr 1fr;}
@@ -722,3 +721,26 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
 @media (max-width:768px){
   .sidebar{overscroll-behavior:contain}
 }
+
+/* ── HEADER v2 ── */
+.topbar.hdr{height:53px;padding:0 24px;gap:12px}
+.hdr-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);flex:none}
+.hdr-logo{width:30px;height:30px;display:block;object-fit:contain;flex:none}
+.hdr-name{font-family:var(--mono);font-size:15px;letter-spacing:2px;white-space:nowrap}
+.hdr-ver{font-family:var(--mono);font-size:10px;color:var(--brand);opacity:.85}
+.hdr-right{display:flex;align-items:center;gap:16px;flex:none}
+.hdr-badge{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;letter-spacing:1px;white-space:nowrap}
+.hdr-badge b{font-weight:700;color:var(--brand)}
+.hdr-badge em{font-style:normal;color:var(--text2);margin-left:10px;padding-left:10px;border-left:1px solid var(--border2)}
+.hdr-tools{display:inline-flex;align-items:center;height:34px;padding:0 16px;border:1px solid var(--border2);border-radius:8px;color:var(--text);font:600 13px var(--sans);text-decoration:none;white-space:nowrap;transition:border-color var(--dur-base),color var(--dur-base),background var(--dur-base)}
+.hdr-tools:hover{border-color:var(--brand);color:var(--brand);background:rgba(79,168,255,.08)}
+.hdr-tools:focus-visible,.hdr-brand:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:8px}
+@media (max-width:1000px){.hdr-badge em{display:none}}
+@media (max-width:768px){
+  .topbar.hdr{padding:0 14px}
+  .hdr-badge{display:none}
+  .hdr-logo{width:28px;height:28px}
+  .hdr-name{font-size:14px;letter-spacing:1.5px}
+  .hdr-tools{height:32px;padding:0 14px}
+}
+@media (max-width:360px){.hdr-ver{display:none}.hdr-name{letter-spacing:1px}}

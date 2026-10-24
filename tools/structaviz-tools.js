@@ -20,14 +20,14 @@
   window.addEventListener('storage',function(e){if(e.key===KEY)apply()});
 
   /* Tab icon and title */
-  if(!document.querySelector('link[rel~="icon"]')){var l=document.createElement('link');l.rel='icon';l.type='image/svg+xml';l.href='/favicon.svg';document.head.appendChild(l)}
+  if(!document.querySelector('link[rel~="icon"]')){var l=document.createElement('link');l.rel='icon';l.type='image/png';l.href='/favicon-96x96.png';document.head.appendChild(l)}
   if(!/StructaViz/i.test(document.title))document.title+=' | StructaViz';
 
   /* Top bar */
   function bar(){
     if(document.querySelector('.svz-top'))return;
     var h=document.createElement('header');h.className='svz-top';
-    h.innerHTML='<a class="svz-brand" href="'+up+'hub.html" aria-label="StructaViz tools home"><img class="svz-ic" src="/favicon.svg" alt="" width="26" height="26"><span class="svz-name">STRUCTAVIZ</span><span class="svz-tag">TOOLS</span></a>'
+    h.innerHTML='<a class="svz-brand" href="'+up+'hub.html" aria-label="StructaViz tools home"><img class="svz-ic" src="/logo-mark.png" alt="" width="26" height="26"><span class="svz-name">STRUCTAVIZ</span><span class="svz-tag">TOOLS</span></a>'
       +'<nav class="svz-nav" aria-label="Navigation">'
       +(isHub?'':'<a href="'+up+'hub.html"><span class="lg">All tools</span><span class="sm">Tools</span></a>')
       +'<a class="svz-back" href="'+up+'app.html"><span class="lg">\u2190 Back to StructaViz</span><span class="sm">\u2190 App</span></a></nav>';

@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StructaViz — Structural Analysis for Kenya</title>
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -387,6 +391,8 @@ footer {
   .footer-inner { flex-direction: column; align-items: flex-start; }
   .footer-info { text-align: left; }
 }
+.nav-logo { width: 28px; height: 28px; display: block; object-fit: contain; }
+.footer-logo { width: 20px; height: 20px; display: block; object-fit: contain; }
 </style>
 </head>
 <body>
@@ -394,7 +400,7 @@ footer {
 <!-- NAV -->
 <nav>
   <a class="nav-brand" href="#">
-    <div class="nav-icon"></div>
+<img class="nav-logo" src="logo-mark.png" alt="" width="26" height="26">
     <span class="nav-name">STRUCTAVIZ</span>
     <span class="nav-ver">v3.1</span>
   </a>
@@ -504,7 +510,7 @@ footer {
 <footer>
   <div class="footer-inner">
     <div class="footer-brand">
-      <div class="footer-icon"></div>
+ <img class="footer-logo" src="logo-mark.png" alt="" width="20" height="20">
       <span class="footer-name">STRUCTAVIZ v3.1</span>
     </div>
     <div class="footer-info">
