@@ -94,6 +94,7 @@ button:active,a.go:active{transform:scale(.98)}
 .tabs,.chips{scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 .tabs::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
 .tabs button,.chips button{min-height:38px}
+@media (max-width:700px){.tabs,.chips{flex-wrap:wrap;overflow:visible;gap:6px}.tabs button,.chips button{padding:6px 12px}}
 tr:hover>td{background:var(--hl)}
 svg text{font-family:var(--svz-sans)}
 
