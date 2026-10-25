@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap');
+@import url('/fonts/fonts.css');
 /* StructaViz Tools: shared theme and layout. Loaded after each page's own styles.
    The theme follows the StructaViz app setting (Dark / Light / Device). */
 

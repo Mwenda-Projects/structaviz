@@ -19,6 +19,9 @@
   if(window.matchMedia){try{matchMedia('(prefers-color-scheme: light)').addEventListener('change',apply)}catch(e){}}
   window.addEventListener('storage',function(e){if(e.key===KEY)apply()});
 
+  /* Offline support (production only, so local development is never cached) */
+  if('serviceWorker' in navigator&&!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}
+
   /* Tab icon and title */
   if(!document.querySelector('link[rel~="icon"]')){var l=document.createElement('link');l.rel='icon';l.type='image/png';l.href='/favicon-96x96.png';document.head.appendChild(l)}
   if(!/StructaViz/i.test(document.title))document.title+=' | StructaViz';
