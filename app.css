@@ -744,3 +744,5 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btype:focus-vi
   .hdr-tools{height:32px;padding:0 14px}
 }
 @media (max-width:360px){.hdr-ver{display:none}.hdr-name{letter-spacing:1px}}
+/* Remove the blue corner marks */
+.panel, .metric, .ai-panel { background-image: none; }
