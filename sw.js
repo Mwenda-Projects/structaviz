@@ -4,7 +4,7 @@
    - Fonts, the PDF library and images: served from the saved copy.
    - The AI Assistant (/api/...) always needs internet and is never saved.
    When you ADD a new page or file, add it to PRECACHE below and change VERSION. */
-const VERSION = 'structaviz-v1';
+const VERSION = 'structaviz-v2';
 
 const PRECACHE = [
   '/', '/app', '/hub',
@@ -14,6 +14,7 @@ const PRECACHE = [
   '/fonts/space-mono-latin-400-normal.woff2', '/fonts/space-mono-latin-700-normal.woff2', '/fonts/space-mono-latin-400-italic.woff2',
   '/fonts/outfit-latin-wght-normal.woff2', '/fonts/syne-latin-wght-normal.woff2', '/fonts/inter-latin-wght-normal.woff2',
   '/vendor/jspdf.umd.min.js',
+  '/svz-select.css', '/svz-select.js',
   '/tools/structaviz-tools.css', '/tools/structaviz-tools.js',
   '/tools/concrete', '/tools/member-checks', '/tools/soil', '/tools/retaining-wall', '/tools/hydrology',
   '/tools/survey', '/tools/highway', '/tools/earthworks', '/tools/scheduler', '/tools/unit-converter'
