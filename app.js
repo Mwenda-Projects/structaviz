@@ -571,9 +571,9 @@ function getReactions(p) {
     } else if (beam === 'simply') {
       RL = (w * L) / 6; RR = (w * L) / 3;
     } else {
-      MA =  (w * L * L) / 20;
-      MB = -(w * L * L) / 30;
-      RL = (w * L) / 6 - (MA - MB) / L;
+      MA = (w * L * L) / 30;
+      MB = (w * L * L) / 20;
+      RL = (w * L) / 6 + (MA - MB) / L;
       RR = (w * L) / 2 - RL;
     }
   }
@@ -618,6 +618,16 @@ function getParams() {
 // Cantilever: load position 'a' counts from the fixed wall;
 //   for a cantilever, load can be placed anywhere along the span.
 function defAt(x, p) {
+  let d = defAtBase(x, p);
+  if (load === 'point' && combinedLoad && p.w > 0) {
+    const { w, L, E, sec: { I } } = p, EI = E * I;
+    if (beam === 'cantilever') d += (w * x*x * (6*L*L - 4*L*x + x*x)) / (24 * EI);
+    else if (beam === 'simply') d += (w * x * (L*L*L - 2*L*x*x + x*x*x)) / (24 * EI);
+    else d += (w * x*x * (L-x)*(L-x)) / (24 * EI);
+  }
+  return d;
+}
+function defAtBase(x, p) {
   const { P, w, L, E, sec:{I}, sw, a } = p;
   const EI = E * I;
   const b_  = L - a;   // distance from load to right end
@@ -653,7 +663,7 @@ function defAt(x, p) {
     } else if (beam === 'simply') {
       d = (w * x * (7*L*L*L*L - 10*L*L*x*x + 3*x*x*x*x)) / (360 * EI * L);
     } else {
-      d = (w * x*x * (L-x)*(L-x) * (7*L - 3*x)) / (360 * EI * L*L);
+      d = (w * x*x * (L-x)*(L-x) * (2*L + x)) / (120 * EI * L);
     }
   }
 
@@ -669,6 +679,16 @@ function defAt(x, p) {
 
 // ─── BENDING MOMENT ───────────────────────────────────────────────────────────
 function momAt(x, p) {
+  let m = momAtBase(x, p);
+  if (load === 'point' && combinedLoad && p.w > 0) {
+    const { w, L } = p;
+    if (beam === 'cantilever') m += (w * (L-x)*(L-x)) / 2;
+    else if (beam === 'simply') m += (w * x * (L-x)) / 2;
+    else m += (w/12) * (6*L*x - 6*x*x - L*L);
+  }
+  return m;
+}
+function momAtBase(x, p) {
   const { P, w, L, sw, a } = p;
   const b_ = L - a;
   let m = 0;
@@ -699,9 +719,9 @@ function momAt(x, p) {
     } else if (beam === 'simply') {
       m = (w*L*x)/6 - (w*x*x*x)/(6*L);
     } else {
-      const MA =  (w*L*L)/20;
-      const MB = -(w*L*L)/30;
-      const RL = (w*L)/6 - (MA - MB)/L;
+      const MA = (w*L*L)/30;
+      const MB = (w*L*L)/20;
+      const RL = (w*L)/6 + (MA - MB)/L;
       m = RL*x - MA - (w*x*x*x)/(6*L);
     }
   }
@@ -718,6 +738,15 @@ function momAt(x, p) {
 
 // ─── SHEAR FORCE ──────────────────────────────────────────────────────────────
 function shearAt(x, p) {
+  let s = shearAtBase(x, p);
+  if (load === 'point' && combinedLoad && p.w > 0) {
+    const { w, L } = p;
+    if (beam === 'cantilever') s += w * (L - x);
+    else s += w * (L/2 - x);
+  }
+  return s;
+}
+function shearAtBase(x, p) {
   const { P, w, L, sw, a } = p;
   const b_ = L - a;
   let s = 0;
@@ -741,9 +770,9 @@ function shearAt(x, p) {
     if (beam === 'cantilever') s = (w*(L-x)*(L-x))/(2*L);
     else if (beam === 'simply') s = (w*L)/6 - (w*x*x)/(2*L);
     else {
-      const MA =  (w*L*L)/20;
-      const MB = -(w*L*L)/30;
-      const RL = (w*L)/6 - (MA-MB)/L;
+      const MA = (w*L*L)/30;
+      const MB = (w*L*L)/20;
+      const RL = (w*L)/6 + (MA-MB)/L;
       s = RL - (w*x*x)/(2*L);
     }
   }
