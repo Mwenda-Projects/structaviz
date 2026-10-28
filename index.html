@@ -60,8 +60,6 @@ a{color:inherit}
 
 /* ---------- Hero ---------- */
 .hero{position:relative;padding:84px 0 40px;text-align:center;overflow:hidden}
-.hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(79,168,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(79,168,255,.035) 1px,transparent 1px);background-size:60px 60px;-webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 30%,#000,transparent);mask-image:radial-gradient(ellipse 70% 60% at 50% 30%,#000,transparent);pointer-events:none}
-.hero::after{content:"";position:absolute;width:760px;height:760px;left:50%;top:-240px;transform:translateX(-50%);background:radial-gradient(circle,rgba(79,168,255,.08),transparent 68%);pointer-events:none}
 .hero .wrap{position:relative;z-index:1}
 .eyebrow{display:inline-block;font:700 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--brand)}
 .hero .eyebrow{padding:6px 14px;border:1px solid rgba(79,168,255,.35);border-radius:999px;margin-bottom:26px}
@@ -73,12 +71,23 @@ h1 span{color:var(--brand)}
 .meta span::before{content:"";display:inline-block;width:5px;height:9px;margin-right:9px;border:solid var(--ok);border-width:0 2px 2px 0;transform:rotate(45deg) translateY(-2px)}
 
 .shot{position:relative;margin:54px auto 0;width:min(1100px,100%)}
-.frame{border:1px solid var(--bd2);border-radius:14px;overflow:hidden;background:var(--bg2);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px rgba(79,168,255,.05)}
+.frame{border:1px solid var(--bd2);border-radius:14px;overflow:hidden;background:var(--bg2);box-shadow:0 24px 60px rgba(0,0,0,.45)}
 .frame-bar{display:flex;gap:7px;padding:11px 14px;background:var(--bg3);border-bottom:1px solid var(--bd)}
 .frame-bar i{width:10px;height:10px;border-radius:50%;background:rgba(150,180,220,.22)}
 .frame img{width:100%;aspect-ratio:1440/860}
-.phone{position:absolute;right:-22px;bottom:-46px;width:21%;border:5px solid #1a2130;border-radius:26px;overflow:hidden;background:var(--bg2);box-shadow:0 24px 60px rgba(0,0,0,.6)}
-.phone img{width:100%;aspect-ratio:780/1520}
+
+/* iPhone mockup: sized from its own width, so it scales cleanly */
+.phone{position:absolute;right:-1.5%;bottom:-48px;width:23%;container-type:inline-size}
+.iphone{position:relative;background:#1d1d1f;border:.55cqw solid #48484c;border-radius:15.8cqw;padding:2.6cqw;box-shadow:0 22px 50px rgba(0,0,0,.5)}
+.iphone .sb{position:absolute;width:1cqw;background:#3a3a3e;border-radius:.5cqw;z-index:-1}
+.sb.a{left:-1.35cqw;top:19cqw;height:6cqw}.sb.v1{left:-1.35cqw;top:30cqw;height:10.5cqw}.sb.v2{left:-1.35cqw;top:43cqw;height:10.5cqw}.sb.p{right:-1.35cqw;top:36cqw;height:17cqw}
+.screen{position:relative;aspect-ratio:390/844;background:#07090d;border-radius:12.4cqw;overflow:hidden;container-type:inline-size;box-shadow:0 0 0 1.4cqw #000}
+.screen img{position:absolute;left:0;top:12.05cqw;width:100%;height:auto;aspect-ratio:780/1520}
+.island{position:absolute;z-index:2;left:50%;top:2.8cqw;width:32.3cqw;height:9.5cqw;margin-left:-16.15cqw;background:#000;border-radius:5cqw}
+.status{position:absolute;z-index:1;left:0;right:0;top:0;height:12.05cqw;display:flex;align-items:center;justify-content:space-between;padding:1.6cqw 7.2cqw 0 10cqw;color:#fff;font:600 4.15cqw/1 -apple-system,"SF Pro Text",system-ui,"Segoe UI",sans-serif}
+.status .sys{display:flex;align-items:center;gap:1.5cqw}
+.status svg{height:3.1cqw;width:auto;fill:currentColor;display:block}
+.home{position:absolute;z-index:2;left:50%;bottom:2.3cqw;width:35cqw;height:1.35cqw;margin-left:-17.5cqw;border-radius:2cqw;background:#fff;opacity:.9}
 
 /* ---------- Sections ---------- */
 section{padding:92px 0}
@@ -97,7 +106,7 @@ h2{font:600 clamp(28px,3.6vw,40px)/1.15 var(--sans);letter-spacing:-.02em;margin
 
 /* Pro */
 .pro{padding:0 0 92px}
-.pro-box{border:1px solid var(--pro-bd);border-radius:18px;padding:40px;background:linear-gradient(135deg,rgba(99,102,241,.10),rgba(99,102,241,.02) 60%)}
+.pro-box{border:1px solid var(--pro-bd);border-radius:18px;padding:40px;background:var(--bg2)}
 .pro-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .badge{font:700 10px var(--mono);letter-spacing:.14em;padding:3px 9px;border-radius:5px;color:var(--pro);background:rgba(99,102,241,.18);border:1px solid var(--pro-bd)}
 .pro-box h2{margin-top:0;font-size:clamp(24px,3vw,32px)}
@@ -109,10 +118,10 @@ h2{font:600 clamp(28px,3.6vw,40px)/1.15 var(--sans);letter-spacing:-.02em;margin
 .pro-item p{color:var(--mut);font-size:15px}
 
 /* Toolkit */
-.toolkit{background:linear-gradient(180deg,transparent,rgba(16,20,29,.6),transparent)}
+.toolkit{background:var(--bg2);border-block:1px solid var(--bd)}
 .tools{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-.tool{display:flex;flex-direction:column;gap:6px;padding:18px;border:1px solid var(--bd);border-radius:12px;background:var(--bg2);text-decoration:none;transition:border-color .2s,transform .2s,background .2s}
-.tool:hover{border-color:var(--brand);background:var(--bg3);transform:translateY(-2px)}
+.tool{display:flex;flex-direction:column;gap:6px;padding:18px;border:1px solid var(--bd);border-radius:12px;background:var(--bg);text-decoration:none;transition:border-color .2s,transform .2s,background .2s}
+.tool:hover{border-color:var(--brand);transform:translateY(-2px)}
 .tool b{font:600 15px/1.3 var(--sans)}
 .tool span{font-size:13px;line-height:1.5;color:var(--mut)}
 .tools-more{display:flex;justify-content:center;margin-top:30px}
@@ -125,7 +134,7 @@ h2{font:600 clamp(28px,3.6vw,40px)/1.15 var(--sans);letter-spacing:-.02em;margin
 
 /* Closing call to action */
 .cta{padding:0 0 92px}
-.cta-box{text-align:center;border:1px solid var(--bd2);border-radius:20px;padding:64px 28px;background:radial-gradient(ellipse at 50% 0%,rgba(79,168,255,.10),transparent 65%),var(--bg2)}
+.cta-box{text-align:center;border:1px solid var(--bd2);border-radius:20px;padding:64px 28px;background:var(--bg2)}
 .cta-box p{color:var(--mut);margin:14px auto 0;max-width:460px}
 .cta-box .cta-row{margin-top:28px}
 
@@ -143,9 +152,9 @@ footer{border-top:1px solid var(--bd);padding:34px 0 40px}
 @media (max-width:719px){
   :root{--wrap:min(1200px,100% - 32px)}
   .hero{padding:52px 0 24px}.lead{font-size:16.5px}
-  .shot{margin-top:40px;width:min(290px,78vw)}
-  .frame{border:5px solid #1a2130;border-radius:28px}.frame-bar{display:none}
-  .frame img{aspect-ratio:780/1520}.phone{display:none}
+  .shot{margin-top:40px;width:auto}
+  .frame{display:none}
+  .phone{position:relative;right:auto;bottom:auto;width:min(300px,76vw);margin-inline:auto}
   section{padding:60px 0}.pro{padding-bottom:60px}.cta{padding-bottom:60px}
   .cards{grid-template-columns:1fr}.card{padding:22px}
   .pro-box{padding:26px 20px}
@@ -186,12 +195,26 @@ footer{border-top:1px solid var(--bd);padding:34px 0 40px}
     <div class="shot">
       <div class="frame">
         <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-        <picture>
-          <source media="(max-width:719px)" srcset="assets/app-mobile.webp">
-          <img src="assets/app-desktop.webp" width="1440" height="860" alt="StructaViz showing a cantilever beam with deflection, bending moment and shear force diagrams, and the KS&nbsp;02-104 compliance checks.">
-        </picture>
+        <img src="assets/app-desktop.webp" width="1440" height="860" loading="lazy" alt="StructaViz showing a cantilever beam with deflection, bending moment and shear force diagrams, and the KS&nbsp;02-104 compliance checks.">
       </div>
-      <div class="phone" aria-hidden="true"><img src="assets/app-mobile.webp" width="780" height="1520" alt="" loading="lazy"></div>
+      <div class="phone">
+        <div class="iphone">
+          <span class="sb a"></span><span class="sb v1"></span><span class="sb v2"></span><span class="sb p"></span>
+          <div class="screen">
+            <div class="island"></div>
+            <div class="status" aria-hidden="true">
+              <span>9:41</span>
+              <span class="sys">
+                <svg viewBox="0 0 18 12"><rect y="8" width="3" height="4" rx=".8"/><rect x="5" y="5.5" width="3" height="6.5" rx=".8"/><rect x="10" y="3" width="3" height="9" rx=".8"/><rect x="15" width="3" height="12" rx=".8"/></svg>
+                <svg viewBox="0 0 17 12"><path d="M8.5 2.3c2.5 0 4.7 1 6.3 2.6l1-1.1A10.4 10.4 0 0 0 8.5.8 10.4 10.4 0 0 0 1.2 3.8l1 1.1a8.9 8.9 0 0 1 6.3-2.6zm0 3.5c1.5 0 2.8.6 3.8 1.5l1-1.1a7.4 7.4 0 0 0-9.6 0l1 1.1c1-.9 2.3-1.5 3.8-1.5zm0 3.4c-.7 0-1.3.3-1.8.7l1.8 2 1.8-2c-.5-.4-1.1-.7-1.8-.7z"/></svg>
+                <svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="19" height="8" rx="2"/><path d="M24 4v4c.9-.3 1.6-1.1 1.6-2S24.9 4.3 24 4z" opacity=".45"/></svg>
+              </span>
+            </div>
+            <img src="assets/app-mobile.webp" width="780" height="1520" alt="StructaViz on a phone, showing the KS&nbsp;02-104 compliance status, key results and the beam diagrams.">
+            <div class="home"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
