@@ -1240,13 +1240,13 @@ function draw2dMultiSpan(result, p) {
   ctx.strokeStyle='#00c896'; ctx.lineWidth=2.5;
   ctx.beginPath();
   xs.forEach((x,i)=>{
-    const cx=xToCanvas(x), cy=beamY+defs[i]*ds;
+    const cx=xToCanvas(x), cy=beamY-defs[i]*ds;
     i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy);
   });
   ctx.stroke();
   const maxDefIdx = defs.map(Math.abs).indexOf(Math.max(...defs.map(Math.abs)));
   ctx.font='10px Space Mono,monospace'; ctx.fillStyle='#00c896'; ctx.textAlign='center';
-  ctx.fillText('δmax='+(maxDef*1000).toFixed(1)+'mm', xToCanvas(xs[maxDefIdx]), beamY+defs[maxDefIdx]*ds+15);
+  ctx.fillText('δmax='+(maxDef*1000).toFixed(1)+'mm', xToCanvas(xs[maxDefIdx]), beamY-defs[maxDefIdx]*ds+15);
 
   // BMD — sagging positive (below baseline), hogging negative (above)
   ctx.lineWidth=1.5;
